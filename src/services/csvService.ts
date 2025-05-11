@@ -69,7 +69,7 @@ export const parseDate = (dateStr: string): Date | null => {
 // Utility function to check if a date is within a date range
 export const isDateInRange = (
   date: Date | null | undefined,
-  range: { from: Date | undefined; to: Date | undefined } | undefined
+  range: { from?: Date; to?: Date } | undefined
 ): boolean => {
   if (!date || !range || (!range.from && !range.to)) return true;
   

@@ -1,558 +1,477 @@
-// This service processes data from the CSV files and provides it to the dashboard components
 import { DateRange } from "react-day-picker";
-import { loadCsvFile, CSV_PATHS, parseDate, isDateInRange } from "./csvService";
+import { CSV_PATHS, loadCsvFile, parseDate, isDateInRange } from "./csvService";
 
-// Define common interfaces for the data types
-export interface KpiData {
-  valorRealizado: number;
-  meta?: number;
-  percentComplete?: number;
-}
+// Helper function to ensure DateRange has proper values
+const normalizeDateRange = (dateRange?: DateRange): { from: Date; to: Date } => {
+  // If no dateRange provided, use default range
+  if (!dateRange) {
+    const today = new Date();
+    return { 
+      from: new Date(today.getFullYear(), today.getMonth(), 1), 
+      to: today 
+    };
+  }
+  
+  // If 'from' is missing, use the first day of the current month
+  const from = dateRange.from || new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  
+  // If 'to' is missing, use the current date
+  const to = dateRange.to || new Date();
+  
+  return { from, to };
+};
 
-export interface KpiPercentData {
-  valorPercentual: number;
-  metaPercentual?: number;
-}
-
-export interface SdrPerformanceData {
-  sdrName: string;
-  leadsAtivados: number;
-  reunioesAgendadas: number;
-  reunioesAcontecidas: number;
-  conexoes: number;
-  taxaLeadsConexoes: number;
-  taxaConexoesAgendadas: number;
-  taxaAgendasAcontecidas: number;
-  metaLeadsAtivados?: number;
-  metaReunioesAgendadas?: number;
-  metaReunioesAcontecidas?: number;
-}
-
-export interface CloserPerformanceData {
-  closerName: string;
-  valorVendido: number;
-  numVendas: number;
-  ticketMedio: number;
-}
-
-export interface SalesFunnelData {
-  etapa: string;
-  valor: number;
-}
-
-// Process the SDR Performance data
+// Fetch SDR KPI data
 export const fetchSdrKpiData = async (
-  metric: string,
-  dateRange?: DateRange,
-  sdr?: string
-): Promise<KpiData> => {
+  kpiType: string, 
+  dateRange?: DateRange, 
+  selectedSdr?: string
+) => {
   try {
-    // Load CSV files
-    const performanceData = await loadCsvFile(CSV_PATHS.SDR_PERFORMANCE);
-    const metaData = await loadCsvFile(CSV_PATHS.SDR_META);
-    
-    // Filter performance data by date range and SDR
-    const filteredPerformance = performanceData.filter((row: any) => {
+    const normalizedDateRange = normalizeDateRange(dateRange);
+    const sdrPerformanceData = await loadCsvFile(CSV_PATHS.SDR_PERFORMANCE);
+    const sdrMetaData = await loadCsvFile(CSV_PATHS.SDR_META);
+
+    // Filter data by date range and SDR if specified
+    const filteredPerformanceData = sdrPerformanceData.filter((row: any) => {
+      if (!row.Data) return false;
+      
       const rowDate = parseDate(row.Data);
-      const sdrMatch = !sdr || sdr === 'all' || row.SDR === sdr;
-      return isDateInRange(rowDate, dateRange) && sdrMatch;
+      const matchesDateRange = isDateInRange(rowDate, normalizedDateRange);
+      const matchesSdr = !selectedSdr || selectedSdr === 'all' || row.SDR === selectedSdr;
+      
+      return matchesDateRange && matchesSdr;
     });
-    
-    // Calculate the realized value based on the metric
+
+    // Calculate based on KPI type
     let valorRealizado = 0;
     
-    switch (metric) {
-      case "leadsAtivados":
-        valorRealizado = filteredPerformance.reduce((sum: number, row: any) => 
-          sum + (Number(row["Empresas Ativadas"]) || 0), 0);
+    switch (kpiType) {
+      case 'leadsAtivados':
+        valorRealizado = filteredPerformanceData.reduce((sum: number, row: any) => 
+          sum + (Number(row['Empresas Ativadas']) || 0), 0);
         break;
-      case "ligacoesFeitas":
-        valorRealizado = filteredPerformance.reduce((sum: number, row: any) => 
-          sum + (Number(row["Ligações Realizadas"]) || 0), 0);
+        
+      case 'ligacoesFeitas':
+        valorRealizado = filteredPerformanceData.reduce((sum: number, row: any) => 
+          sum + (Number(row['Ligações Realizadas']) || 0), 0);
         break;
-      case "ligacoesAtendidas":
-        valorRealizado = filteredPerformance.reduce((sum: number, row: any) => 
-          sum + (Number(row["Ligações Atendidas"]) || 0), 0);
+        
+      case 'ligacoesAtendidas':
+        valorRealizado = filteredPerformanceData.reduce((sum: number, row: any) => 
+          sum + (Number(row['Ligações Atendidas']) || 0), 0);
         break;
-      case "tempoLinha":
-        valorRealizado = filteredPerformance.reduce((sum: number, row: any) => {
-          if (!row["Tempo"]) return sum;
-          // Assuming time is in format hh:mm:ss
-          const timeParts = row["Tempo"].split(':');
-          if (timeParts.length !== 3) return sum;
-          const seconds = Number(timeParts[0]) * 3600 + Number(timeParts[1]) * 60 + Number(timeParts[2]);
-          return sum + seconds;
+        
+      case 'tempoLinha':
+        // Assuming time is in format HH:MM:SS or similar
+        valorRealizado = filteredPerformanceData.reduce((sum: number, row: any) => {
+          if (!row.Tempo) return sum;
+          
+          // Try to parse time string to seconds
+          const timeStr = row.Tempo.trim();
+          const timeParts = timeStr.split(':');
+          
+          if (timeParts.length === 3) {
+            const hours = parseInt(timeParts[0], 10) || 0;
+            const minutes = parseInt(timeParts[1], 10) || 0;
+            const seconds = parseInt(timeParts[2], 10) || 0;
+            return sum + (hours * 3600 + minutes * 60 + seconds);
+          }
+          
+          return sum;
         }, 0);
-        // Return time in seconds, will be formatted in the component
         break;
-      case "reunioesAgendadas":
-        valorRealizado = filteredPerformance.reduce((sum: number, row: any) => 
-          sum + (Number(row["Marcadas Out"]) || 0) + 
-                (Number(row["Marcadas Recom"]) || 0) + 
-                (Number(row["Marcadas Inbound"]) || 0), 0);
+        
+      case 'reunioesAgendadas':
+        valorRealizado = filteredPerformanceData.reduce((sum: number, row: any) => 
+          sum + 
+          (Number(row['Marcadas Out']) || 0) + 
+          (Number(row['Marcadas Recom']) || 0) + 
+          (Number(row['Marcadas Inbound']) || 0), 0);
         break;
-      case "reunioesAcontecidas":
-        valorRealizado = filteredPerformance.reduce((sum: number, row: any) => 
-          sum + (Number(row["Show Out"]) || 0) + 
-                (Number(row["Show Recom"]) || 0) + 
-                (Number(row["Show Inbound"]) || 0), 0);
+        
+      case 'reunioesAcontecidas':
+        valorRealizado = filteredPerformanceData.reduce((sum: number, row: any) => 
+          sum + 
+          (Number(row['Show Out']) || 0) + 
+          (Number(row['Show Recom']) || 0) + 
+          (Number(row['Show Inbound']) || 0), 0);
         break;
-      case "conexoes":
-        valorRealizado = filteredPerformance.reduce((sum: number, row: any) => 
-          sum + (Number(row["Novas Conexões Stakeholder"]) || 0), 0);
+        
+      case 'taxaLeadsConexoes': {
+        const totalLeads = filteredPerformanceData.reduce((sum: number, row: any) => 
+          sum + (Number(row['Empresas Ativadas']) || 0), 0);
+          
+        const totalConexoes = filteredPerformanceData.reduce((sum: number, row: any) => 
+          sum + (Number(row['Novas Conexões Stakeholder']) || 0), 0);
+          
+        valorRealizado = totalLeads > 0 ? (totalConexoes / totalLeads) * 100 : 0;
         break;
-      case "taxaLeadsConexoes":
-        const leads = filteredPerformance.reduce((sum: number, row: any) => 
-          sum + (Number(row["Empresas Ativadas"]) || 0), 0);
-        const conexoes = filteredPerformance.reduce((sum: number, row: any) => 
-          sum + (Number(row["Novas Conexões Stakeholder"]) || 0), 0);
-        valorRealizado = leads > 0 ? (conexoes / leads) * 100 : 0;
+      }
+      
+      case 'taxaConexoesAgendadas': {
+        const totalConexoes = filteredPerformanceData.reduce((sum: number, row: any) => 
+          sum + (Number(row['Novas Conexões Stakeholder']) || 0), 0);
+          
+        const totalAgendadas = filteredPerformanceData.reduce((sum: number, row: any) => 
+          sum + 
+          (Number(row['Marcadas Out']) || 0) + 
+          (Number(row['Marcadas Recom']) || 0) + 
+          (Number(row['Marcadas Inbound']) || 0), 0);
+          
+        valorRealizado = totalConexoes > 0 ? (totalAgendadas / totalConexoes) * 100 : 0;
         break;
-      case "taxaConexoesAgendadas":
-        const conexoesAgendadas = filteredPerformance.reduce((sum: number, row: any) => 
-          sum + (Number(row["Novas Conexões Stakeholder"]) || 0), 0);
-        const agendadas = filteredPerformance.reduce((sum: number, row: any) => 
-          sum + (Number(row["Marcadas Out"]) || 0) + 
-                (Number(row["Marcadas Recom"]) || 0) + 
-                (Number(row["Marcadas Inbound"]) || 0), 0);
-        valorRealizado = conexoesAgendadas > 0 ? (agendadas / conexoesAgendadas) * 100 : 0;
+      }
+      
+      case 'taxaAgendasAcontecidas': {
+        const totalAgendadas = filteredPerformanceData.reduce((sum: number, row: any) => 
+          sum + 
+          (Number(row['Marcadas Out']) || 0) + 
+          (Number(row['Marcadas Recom']) || 0) + 
+          (Number(row['Marcadas Inbound']) || 0), 0);
+          
+        const totalAcontecidas = filteredPerformanceData.reduce((sum: number, row: any) => 
+          sum + 
+          (Number(row['Show Out']) || 0) + 
+          (Number(row['Show Recom']) || 0) + 
+          (Number(row['Show Inbound']) || 0), 0);
+          
+        valorRealizado = totalAgendadas > 0 ? (totalAcontecidas / totalAgendadas) * 100 : 0;
         break;
-      case "taxaAgendadasAcontecidas":
-        const totalAgendadas = filteredPerformance.reduce((sum: number, row: any) => 
-          sum + (Number(row["Marcadas Out"]) || 0) + 
-                (Number(row["Marcadas Recom"]) || 0) + 
-                (Number(row["Marcadas Inbound"]) || 0), 0);
-        const acontecidas = filteredPerformance.reduce((sum: number, row: any) => 
-          sum + (Number(row["Show Out"]) || 0) + 
-                (Number(row["Show Recom"]) || 0) + 
-                (Number(row["Show Inbound"]) || 0), 0);
-        valorRealizado = totalAgendadas > 0 ? (acontecidas / totalAgendadas) * 100 : 0;
-        break;
+      }
+      
       default:
         valorRealizado = 0;
     }
+
+    // Get meta from SDR_META data
+    let meta = 0;
+    const fromMonth = normalizedDateRange.from.getMonth() + 1; // Add 1 because JS months are 0-indexed
+    const fromYear = normalizedDateRange.from.getFullYear();
     
-    // Get the corresponding meta
-    let meta: number | undefined;
-    let percentComplete: number | undefined;
+    // Map KPI types to meta types
+    const metaTypeMapping: Record<string, string> = {
+      'leadsAtivados': 'Ativadas',
+      'ligacoesFeitas': 'Ligações Realizadas',
+      'ligacoesAtendidas': 'Ligações Atendidas',
+      'tempoLinha': 'Tempo total em linha',
+      'reunioesAgendadas': 'Agendadas OUT', // This is simplified, should sum multiple meta types
+      'reunioesAcontecidas': 'Acontecidas OUT', // This is simplified, should sum multiple meta types
+      'taxaLeadsConexoes': 'Tx Ativadas > Conexões',
+      'taxaConexoesAgendadas': 'Tx Conexões > Agendadas',
+      'taxaAgendasAcontecidas': 'Tx Agendadas > Acontecidas'
+    };
     
-    // Extract months from the date range
-    const months: { month: number, year: number }[] = [];
-    if (dateRange?.from) {
-      const startMonth = dateRange.from.getMonth() + 1; // 1-indexed
-      const startYear = dateRange.from.getFullYear();
-      const endMonth = dateRange.to ? dateRange.to.getMonth() + 1 : startMonth;
-      const endYear = dateRange.to ? dateRange.to.getFullYear() : startYear;
-      
-      let currentYear = startYear;
-      let currentMonth = startMonth;
-      
-      while (currentYear < endYear || (currentYear === endYear && currentMonth <= endMonth)) {
-        months.push({ month: currentMonth, year: currentYear });
-        currentMonth++;
-        if (currentMonth > 12) {
-          currentMonth = 1;
-          currentYear++;
-        }
-      }
-    }
-    
-    // Filter meta data by months and SDR
-    let metaType = '';
-    switch (metric) {
-      case "leadsAtivados":
-        metaType = "Ativadas";
-        break;
-      case "ligacoesFeitas":
-        metaType = "Ligações Realizadas";
-        break;
-      case "ligacoesAtendidas":
-        metaType = "Ligações Atendidas";
-        break;
-      case "tempoLinha":
-        metaType = "Tempo total em linha";
-        break;
-      case "reunioesAgendadas":
-        // Sum of multiple meta types
-        break;
-      case "reunioesAcontecidas":
-        // Sum of multiple meta types
-        break;
-      case "taxaLeadsConexoes":
-        metaType = "Tx Ativadas > Conexões";
-        break;
-      case "taxaConexoesAgendadas":
-        metaType = "Tx Conexões > Agendadas";
-        break;
-      case "taxaAgendadasAcontecidas":
-        metaType = "Tx Agendadas > Acontecidas";
-        break;
-    }
+    const metaType = metaTypeMapping[kpiType];
     
     if (metaType) {
-      const filteredMeta = metaData.filter((row: any) => {
-        if (row.Tipo !== metaType) return false;
+      const filteredMetaData = sdrMetaData.filter((row: any) => {
+        if (!row.Mês) return false;
         
-        const sdrMatch = !sdr || sdr === 'all' || row.SDR === sdr;
-        if (!sdrMatch) return false;
+        const rowDate = parseDate(row.Mês);
+        if (!rowDate) return false;
         
-        const rowMonth = row.Mês ? parseDate(row.Mês) : null;
-        if (!rowMonth) return false;
+        const rowMonth = rowDate.getMonth() + 1;
+        const rowYear = rowDate.getFullYear();
         
-        const rowMonthValue = rowMonth.getMonth() + 1;
-        const rowYearValue = rowMonth.getFullYear();
+        const matchesDate = rowMonth === fromMonth && rowYear === fromYear;
+        const matchesType = row.Tipo === metaType;
+        const matchesSdr = !selectedSdr || selectedSdr === 'all' || row.SDR === selectedSdr;
         
-        return months.some(m => m.month === rowMonthValue && m.year === rowYearValue);
+        return matchesDate && matchesType && matchesSdr;
       });
       
-      meta = filteredMeta.reduce((sum: number, row: any) => sum + (Number(row.Valor) || 0), 0);
-      
-      if (meta > 0) {
-        percentComplete = Math.round((valorRealizado / meta) * 100);
-      }
-    } else if (metric === "reunioesAgendadas") {
-      // Sum the metas for "Agendadas OUT", "Agendadas INB", "Agendadas RECOM"
-      const metaTypes = ["Agendadas OUT", "Agendadas INB", "Agendadas RECOM"];
-      meta = metaData
-        .filter((row: any) => {
-          const sdrMatch = !sdr || sdr === 'all' || row.SDR === sdr;
-          const typeMatch = metaTypes.includes(row.Tipo);
-          
-          const rowMonth = row.Mês ? parseDate(row.Mês) : null;
-          if (!rowMonth) return false;
-          
-          const rowMonthValue = rowMonth.getMonth() + 1;
-          const rowYearValue = rowMonth.getFullYear();
-          
-          return sdrMatch && typeMatch && months.some(m => m.month === rowMonthValue && m.year === rowYearValue);
-        })
-        .reduce((sum: number, row: any) => sum + (Number(row.Valor) || 0), 0);
-      
-      if (meta > 0) {
-        percentComplete = Math.round((valorRealizado / meta) * 100);
-      }
-    } else if (metric === "reunioesAcontecidas") {
-      // Sum the metas for "Acontecidas OUT", "Acontecidas INB", "Acontecidas RECOM"
-      const metaTypes = ["Acontecidas OUT", "Acontecidas INB", "Acontecidas RECOM"];
-      meta = metaData
-        .filter((row: any) => {
-          const sdrMatch = !sdr || sdr === 'all' || row.SDR === sdr;
-          const typeMatch = metaTypes.includes(row.Tipo);
-          
-          const rowMonth = row.Mês ? parseDate(row.Mês) : null;
-          if (!rowMonth) return false;
-          
-          const rowMonthValue = rowMonth.getMonth() + 1;
-          const rowYearValue = rowMonth.getFullYear();
-          
-          return sdrMatch && typeMatch && months.some(m => m.month === rowMonthValue && m.year === rowYearValue);
-        })
-        .reduce((sum: number, row: any) => sum + (Number(row.Valor) || 0), 0);
-      
-      if (meta > 0) {
-        percentComplete = Math.round((valorRealizado / meta) * 100);
-      }
+      meta = filteredMetaData.reduce((sum: number, row: any) => sum + (Number(row.Valor) || 0), 0);
     }
-    
-    // Format time if needed
-    if (metric === "tempoLinha") {
-      const hours = Math.floor(valorRealizado / 3600);
-      const minutes = Math.floor((valorRealizado % 3600) / 60);
-      const seconds = valorRealizado % 60;
-      return {
-        valorRealizado: valorRealizado, // return seconds for consistent calculations
-        meta,
-        percentComplete,
-      };
-    }
-    
+
+    // Calculate percentage of completion
+    const percentComplete = meta > 0 ? (valorRealizado / meta) * 100 : 0;
+
     return {
       valorRealizado,
       meta,
-      percentComplete,
+      percentComplete
     };
   } catch (error) {
-    console.error(`Error fetching SDR KPI data for ${metric}:`, error);
+    console.error(`Error fetching ${kpiType} KPI data:`, error);
     return {
       valorRealizado: 0,
-      meta: undefined,
-      percentComplete: undefined,
+      meta: 0,
+      percentComplete: 0
     };
   }
 };
 
+// Fetch SDR performance data for bar chart
 export const fetchSdrPerformanceData = async (
-  dateRange?: DateRange,
-  sdr?: string
-): Promise<SdrPerformanceData[]> => {
+  dateRange?: DateRange, 
+  selectedSdr?: string
+) => {
   try {
-    // Load CSV files
-    const performanceData = await loadCsvFile(CSV_PATHS.SDR_PERFORMANCE);
-    const metaData = await loadCsvFile(CSV_PATHS.SDR_META);
+    const normalizedDateRange = normalizeDateRange(dateRange);
+    const sdrPerformanceData = await loadCsvFile(CSV_PATHS.SDR_PERFORMANCE);
+    
+    // Filter data by date range
+    const filteredData = sdrPerformanceData.filter((row: any) => {
+      if (!row.Data) return false;
+      
+      const rowDate = parseDate(row.Data);
+      const matchesDateRange = isDateInRange(rowDate, normalizedDateRange);
+      const matchesSdr = !selectedSdr || selectedSdr === 'all' || row.SDR === selectedSdr;
+      
+      return matchesDateRange && matchesSdr;
+    });
     
     // Get unique SDRs
-    const sdrFilter = sdr && sdr !== 'all' ? sdr : undefined;
-    const sdrs = [...new Set(
-      performanceData
-        .filter((row: any) => !sdrFilter || row.SDR === sdrFilter)
-        .map((row: any) => row.SDR)
-    )];
+    const sdrs = Array.from(new Set(filteredData.map((row: any) => row.SDR))).filter(Boolean);
+    
+    // If a specific SDR is selected and it's not in the filtered data, add it
+    if (selectedSdr && selectedSdr !== 'all' && !sdrs.includes(selectedSdr)) {
+      sdrs.push(selectedSdr);
+    }
     
     // Calculate metrics for each SDR
-    const result: SdrPerformanceData[] = [];
-    
-    for (const sdrName of sdrs) {
-      // Filter performance data by date range and SDR
-      const filteredPerformance = performanceData.filter((row: any) => {
-        const rowDate = parseDate(row.Data);
-        return isDateInRange(rowDate, dateRange) && row.SDR === sdrName;
-      });
+    const sdrPerformance = sdrs.map((sdr: string) => {
+      const sdrData = filteredData.filter((row: any) => row.SDR === sdr);
       
-      // Calculate metrics
-      const leadsAtivados = filteredPerformance.reduce((sum: number, row: any) => 
-        sum + (Number(row["Empresas Ativadas"]) || 0), 0);
+      const leadsAtivados = sdrData.reduce((sum: number, row: any) => 
+        sum + (Number(row['Empresas Ativadas']) || 0), 0);
+        
+      const conexoes = sdrData.reduce((sum: number, row: any) => 
+        sum + (Number(row['Novas Conexões Stakeholder']) || 0), 0);
+        
+      const reunioesAgendadas = sdrData.reduce((sum: number, row: any) => 
+        sum + 
+        (Number(row['Marcadas Out']) || 0) + 
+        (Number(row['Marcadas Recom']) || 0) + 
+        (Number(row['Marcadas Inbound']) || 0), 0);
+        
+      const reunioesAcontecidas = sdrData.reduce((sum: number, row: any) => 
+        sum + 
+        (Number(row['Show Out']) || 0) + 
+        (Number(row['Show Recom']) || 0) + 
+        (Number(row['Show Inbound']) || 0), 0);
+        
+      const taxaLeadsConexoes = leadsAtivados > 0 
+        ? (conexoes / leadsAtivados) * 100 
+        : 0;
+        
+      const taxaConexoesAgendadas = conexoes > 0 
+        ? (reunioesAgendadas / conexoes) * 100 
+        : 0;
+        
+      const taxaAgendasAcontecidas = reunioesAgendadas > 0 
+        ? (reunioesAcontecidas / reunioesAgendadas) * 100 
+        : 0;
       
-      const conexoes = filteredPerformance.reduce((sum: number, row: any) => 
-        sum + (Number(row["Novas Conexões Stakeholder"]) || 0), 0);
-      
-      const reunioesAgendadas = filteredPerformance.reduce((sum: number, row: any) => 
-        sum + (Number(row["Marcadas Out"]) || 0) + 
-              (Number(row["Marcadas Recom"]) || 0) + 
-              (Number(row["Marcadas Inbound"]) || 0), 0);
-      
-      const reunioesAcontecidas = filteredPerformance.reduce((sum: number, row: any) => 
-        sum + (Number(row["Show Out"]) || 0) + 
-              (Number(row["Show Recom"]) || 0) + 
-              (Number(row["Show Inbound"]) || 0), 0);
-      
-      const taxaLeadsConexoes = leadsAtivados > 0 ? (conexoes / leadsAtivados) * 100 : 0;
-      const taxaConexoesAgendadas = conexoes > 0 ? (reunioesAgendadas / conexoes) * 100 : 0;
-      const taxaAgendasAcontecidas = reunioesAgendadas > 0 ? (reunioesAcontecidas / reunioesAgendadas) * 100 : 0;
-      
-      // Add calculated metrics to result
-      result.push({
-        sdrName,
+      return {
+        sdrName: sdr,
         leadsAtivados,
+        conexoes,
         reunioesAgendadas,
         reunioesAcontecidas,
-        conexoes,
         taxaLeadsConexoes,
         taxaConexoesAgendadas,
-        taxaAgendasAcontecidas,
-      });
-    }
-    
-    // Add a "Total Equipe" entry if multiple SDRs
-    if (result.length > 1) {
-      const totalLeadsAtivados = result.reduce((sum, sdr) => sum + sdr.leadsAtivados, 0);
-      const totalConexoes = result.reduce((sum, sdr) => sum + sdr.conexoes, 0);
-      const totalReunioesAgendadas = result.reduce((sum, sdr) => sum + sdr.reunioesAgendadas, 0);
-      const totalReunioesAcontecidas = result.reduce((sum, sdr) => sum + sdr.reunioesAcontecidas, 0);
-      
-      const totalTaxaLeadsConexoes = totalLeadsAtivados > 0 ? (totalConexoes / totalLeadsAtivados) * 100 : 0;
-      const totalTaxaConexoesAgendadas = totalConexoes > 0 ? (totalReunioesAgendadas / totalConexoes) * 100 : 0;
-      const totalTaxaAgendasAcontecidas = totalReunioesAgendadas > 0 ? (totalReunioesAcontecidas / totalReunioesAgendadas) * 100 : 0;
-      
-      result.push({
-        sdrName: 'Total Equipe',
-        leadsAtivados: totalLeadsAtivados,
-        reunioesAgendadas: totalReunioesAgendadas,
-        reunioesAcontecidas: totalReunioesAcontecidas,
-        conexoes: totalConexoes,
-        taxaLeadsConexoes: totalTaxaLeadsConexoes,
-        taxaConexoesAgendadas: totalTaxaConexoesAgendadas,
-        taxaAgendasAcontecidas: totalTaxaAgendasAcontecidas,
-      });
-    }
-    
-    return result;
-  } catch (error) {
-    console.error("Error fetching SDR performance data:", error);
-    return [];
-  }
-};
-
-export const fetchSalesFunnelData = async (
-  dateRange?: DateRange,
-  sdr?: string
-): Promise<SalesFunnelData[]> => {
-  try {
-    // Load CSV files
-    const performanceData = await loadCsvFile(CSV_PATHS.SDR_PERFORMANCE);
-    
-    // Filter performance data by date range and SDR
-    const filteredPerformance = performanceData.filter((row: any) => {
-      const rowDate = parseDate(row.Data);
-      const sdrMatch = !sdr || sdr === 'all' || row.SDR === sdr;
-      return isDateInRange(rowDate, dateRange) && sdrMatch;
+        taxaAgendasAcontecidas
+      };
     });
     
-    // Calculate funnel metrics
-    const leadsAtivados = filteredPerformance.reduce((sum: number, row: any) => 
-      sum + (Number(row["Empresas Ativadas"]) || 0), 0);
+    // Add total for all SDRs
+    const totalLeadsAtivados = sdrPerformance.reduce((sum, sdr) => sum + sdr.leadsAtivados, 0);
+    const totalConexoes = sdrPerformance.reduce((sum, sdr) => sum + sdr.conexoes, 0);
+    const totalReunioesAgendadas = sdrPerformance.reduce((sum, sdr) => sum + sdr.reunioesAgendadas, 0);
+    const totalReunioesAcontecidas = sdrPerformance.reduce((sum, sdr) => sum + sdr.reunioesAcontecidas, 0);
     
-    const conexoes = filteredPerformance.reduce((sum: number, row: any) => 
-      sum + (Number(row["Novas Conexões Stakeholder"]) || 0), 0);
+    const totalTaxaLeadsConexoes = totalLeadsAtivados > 0 
+      ? (totalConexoes / totalLeadsAtivados) * 100 
+      : 0;
+      
+    const totalTaxaConexoesAgendadas = totalConexoes > 0 
+      ? (totalReunioesAgendadas / totalConexoes) * 100 
+      : 0;
+      
+    const totalTaxaAgendasAcontecidas = totalReunioesAgendadas > 0 
+      ? (totalReunioesAcontecidas / totalReunioesAgendadas) * 100 
+      : 0;
     
-    const reunioesAgendadas = filteredPerformance.reduce((sum: number, row: any) => 
-      sum + (Number(row["Marcadas Out"]) || 0) + 
-            (Number(row["Marcadas Recom"]) || 0) + 
-            (Number(row["Marcadas Inbound"]) || 0), 0);
+    sdrPerformance.push({
+      sdrName: 'Total Equipe',
+      leadsAtivados: totalLeadsAtivados,
+      conexoes: totalConexoes,
+      reunioesAgendadas: totalReunioesAgendadas,
+      reunioesAcontecidas: totalReunioesAcontecidas,
+      taxaLeadsConexoes: totalTaxaLeadsConexoes,
+      taxaConexoesAgendadas: totalTaxaConexoesAgendadas,
+      taxaAgendasAcontecidas: totalTaxaAgendasAcontecidas
+    });
     
-    const reunioesAcontecidas = filteredPerformance.reduce((sum: number, row: any) => 
-      sum + (Number(row["Show Out"]) || 0) + 
-            (Number(row["Show Recom"]) || 0) + 
-            (Number(row["Show Inbound"]) || 0), 0);
-    
-    // Return funnel data in the expected format
-    return [
-      { etapa: "Leads Ativados", valor: leadsAtivados },
-      { etapa: "Conexões", valor: conexoes },
-      { etapa: "Reuniões Agendadas", valor: reunioesAgendadas },
-      { etapa: "Reuniões Acontecidas", valor: reunioesAcontecidas },
-    ];
+    return sdrPerformance;
   } catch (error) {
-    console.error("Error fetching sales funnel data:", error);
+    console.error('Error fetching SDR performance data:', error);
     return [];
   }
 };
 
-// Function to fetch trend data over time
+// Fetch trend data for line chart
 export const fetchSdrTrendData = async (
-  dateRange?: DateRange,
-  sdr?: string
-): Promise<any[]> => {
+  dateRange?: DateRange, 
+  selectedSdr?: string
+) => {
   try {
-    // Load CSV files
-    const performanceData = await loadCsvFile(CSV_PATHS.SDR_PERFORMANCE);
+    const normalizedDateRange = normalizeDateRange(dateRange);
+    const sdrPerformanceData = await loadCsvFile(CSV_PATHS.SDR_PERFORMANCE);
     
-    // Filter performance data by SDR
-    const sdrFilter = sdr && sdr !== 'all' ? sdr : undefined;
-    const filteredBySdr = performanceData.filter((row: any) => 
-      !sdrFilter || row.SDR === sdrFilter
+    // Filter data by date range and SDR
+    const filteredData = sdrPerformanceData.filter((row: any) => {
+      if (!row.Data) return false;
+      
+      const rowDate = parseDate(row.Data);
+      const matchesDateRange = isDateInRange(rowDate, normalizedDateRange);
+      const matchesSdr = !selectedSdr || selectedSdr === 'all' || row.SDR === selectedSdr;
+      
+      return matchesDateRange && matchesSdr;
+    });
+    
+    // Determine granularity based on date range duration
+    const durationInDays = Math.ceil(
+      (normalizedDateRange.to.getTime() - normalizedDateRange.from.getTime()) / (1000 * 60 * 60 * 24)
     );
     
-    // Filter by date range if provided
-    const filteredData = filteredBySdr.filter((row: any) => {
-      const rowDate = parseDate(row.Data);
-      return isDateInRange(rowDate, dateRange);
-    });
-    
-    // Determine time granularity based on date range duration
     let granularity: 'day' | 'week' | 'month' = 'day';
-    if (dateRange?.from && dateRange?.to) {
-      const diffDays = Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24));
-      if (diffDays > 90) {
-        granularity = 'month';
-      } else if (diffDays > 31) {
-        granularity = 'week';
-      }
+    if (durationInDays > 90) {
+      granularity = 'month';
+    } else if (durationInDays > 31) {
+      granularity = 'week';
     }
     
-    // Group data by the determined granularity
-    const groupedData = new Map();
+    // Group data by selected granularity
+    const periodMap = new Map();
     
-    for (const row of filteredData) {
+    filteredData.forEach((row: any) => {
       const rowDate = parseDate(row.Data);
-      if (!rowDate) continue;
+      if (!rowDate) return;
       
-      let periodKey: string;
+      let periodKey;
       
       if (granularity === 'day') {
-        periodKey = `${rowDate.getDate().toString().padStart(2, '0')}/${(rowDate.getMonth() + 1).toString().padStart(2, '0')}`;
+        periodKey = rowDate.toISOString().split('T')[0]; // YYYY-MM-DD
       } else if (granularity === 'week') {
-        // Get the ISO week number
-        const weekNum = Math.ceil((rowDate.getDate() + (new Date(rowDate.getFullYear(), rowDate.getMonth(), 1).getDay())) / 7);
-        periodKey = `Sem ${weekNum}/${(rowDate.getMonth() + 1).toString().padStart(2, '0')}`;
+        // Get the Monday of the week
+        const day = rowDate.getDay();
+        const diff = rowDate.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+        const monday = new Date(rowDate);
+        monday.setDate(diff);
+        periodKey = monday.toISOString().split('T')[0]; // YYYY-MM-DD of Monday
       } else {
-        periodKey = `${(rowDate.getMonth() + 1).toString().padStart(2, '0')}/${rowDate.getFullYear()}`;
+        // Month
+        periodKey = `${rowDate.getFullYear()}-${String(rowDate.getMonth() + 1).padStart(2, '0')}`;
       }
       
-      if (!groupedData.has(periodKey)) {
-        groupedData.set(periodKey, {
+      if (!periodMap.has(periodKey)) {
+        periodMap.set(periodKey, {
           periodo: periodKey,
           leadsAtivados: 0,
           reunioesAgendadas: 0,
-          reunioesAcontecidas: 0,
+          reunioesAcontecidas: 0
         });
       }
       
-      const periodData = groupedData.get(periodKey);
+      const periodData = periodMap.get(periodKey);
       
-      periodData.leadsAtivados += Number(row["Empresas Ativadas"]) || 0;
-      periodData.reunioesAgendadas += (Number(row["Marcadas Out"]) || 0) + 
-                                     (Number(row["Marcadas Recom"]) || 0) + 
-                                     (Number(row["Marcadas Inbound"]) || 0);
-      periodData.reunioesAcontecidas += (Number(row["Show Out"]) || 0) + 
-                                      (Number(row["Show Recom"]) || 0) + 
-                                      (Number(row["Show Inbound"]) || 0);
-    }
+      periodData.leadsAtivados += (Number(row['Empresas Ativadas']) || 0);
+      periodData.reunioesAgendadas += 
+        (Number(row['Marcadas Out']) || 0) + 
+        (Number(row['Marcadas Recom']) || 0) + 
+        (Number(row['Marcadas Inbound']) || 0);
+      periodData.reunioesAcontecidas += 
+        (Number(row['Show Out']) || 0) + 
+        (Number(row['Show Recom']) || 0) + 
+        (Number(row['Show Inbound']) || 0);
+    });
     
-    // Convert the map to an array and sort by period
-    const result = Array.from(groupedData.values());
+    // Convert map to array and sort by period
+    const trendData = Array.from(periodMap.values()).sort((a, b) => 
+      a.periodo.localeCompare(b.periodo)
+    );
     
-    // Sort the result by period
+    // Format period labels based on granularity
     if (granularity === 'day') {
-      result.sort((a, b) => {
-        const [dayA, monthA] = a.periodo.split('/').map(Number);
-        const [dayB, monthB] = b.periodo.split('/').map(Number);
-        return monthA !== monthB ? monthA - monthB : dayA - dayB;
-      });
+      // Keep YYYY-MM-DD format or change to DD/MM
     } else if (granularity === 'week') {
-      result.sort((a, b) => {
-        const [weekA, monthA] = a.periodo.substring(4).split('/').map(Number);
-        const [weekB, monthB] = b.periodo.substring(4).split('/').map(Number);
-        return monthA !== monthB ? monthA - monthB : weekA - weekB;
+      trendData.forEach(item => {
+        const startDate = new Date(item.periodo);
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 6);
+        
+        // Format as "DD/MM - DD/MM"
+        item.periodo = `${startDate.getDate()}/${startDate.getMonth() + 1} - ${endDate.getDate()}/${endDate.getMonth() + 1}`;
       });
     } else {
-      result.sort((a, b) => {
-        const [monthA, yearA] = a.periodo.split('/').map(Number);
-        const [monthB, yearB] = b.periodo.split('/').map(Number);
-        return yearA !== yearB ? yearA - yearB : monthA - monthB;
+      // Month format
+      trendData.forEach(item => {
+        const [year, month] = item.periodo.split('-');
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        item.periodo = `${monthNames[parseInt(month) - 1]} ${year}`;
       });
     }
     
-    return result;
+    return trendData;
   } catch (error) {
-    console.error("Error fetching SDR trend data:", error);
+    console.error('Error fetching SDR trend data:', error);
     return [];
   }
 };
 
-export const fetchCloserKpiData = async (
-  metric: string,
-  dateRangeStart?: DateRange,
-  dateRangeEnd?: DateRange,
-  closer?: string,
-  origin?: string
-): Promise<KpiData> => {
-  // Mock data - would be replaced with actual data processing
-  return {
-    valorRealizado: Math.floor(Math.random() * 10000),
-    meta: Math.floor(Math.random() * 12000),
-    percentComplete: Math.floor(Math.random() * 100),
-  };
-};
-
-export const fetchCloserPerformanceData = async (
-  dateRangeStart?: DateRange,
-  dateRangeEnd?: DateRange,
-  closer?: string,
-  origin?: string
-): Promise<CloserPerformanceData[]> => {
-  // Mock data - would be replaced with actual data processing
-  return [
-    {
-      closerName: "Gabriel",
-      valorVendido: 85000,
-      numVendas: 15,
-      ticketMedio: 5667,
-    },
-    {
-      closerName: "Célio",
-      valorVendido: 95000,
-      numVendas: 17,
-      ticketMedio: 5588,
-    },
-  ];
+// Fetch sales funnel data
+export const fetchSalesFunnelData = async (
+  dateRange?: DateRange, 
+  selectedSdr?: string
+) => {
+  try {
+    const normalizedDateRange = normalizeDateRange(dateRange);
+    const sdrPerformanceData = await loadCsvFile(CSV_PATHS.SDR_PERFORMANCE);
+    
+    // Filter data by date range and SDR
+    const filteredData = sdrPerformanceData.filter((row: any) => {
+      if (!row.Data) return false;
+      
+      const rowDate = parseDate(row.Data);
+      const matchesDateRange = isDateInRange(rowDate, normalizedDateRange);
+      const matchesSdr = !selectedSdr || selectedSdr === 'all' || row.SDR === selectedSdr;
+      
+      return matchesDateRange && matchesSdr;
+    });
+    
+    // Calculate funnel metrics
+    const leadsAtivados = filteredData.reduce((sum: number, row: any) => 
+      sum + (Number(row['Empresas Ativadas']) || 0), 0);
+      
+    const conexoes = filteredData.reduce((sum: number, row: any) => 
+      sum + (Number(row['Novas Conexões Stakeholder']) || 0), 0);
+      
+    const reunioesAgendadas = filteredData.reduce((sum: number, row: any) => 
+      sum + 
+      (Number(row['Marcadas Out']) || 0) + 
+      (Number(row['Marcadas Recom']) || 0) + 
+      (Number(row['Marcadas Inbound']) || 0), 0);
+      
+    const reunioesAcontecidas = filteredData.reduce((sum: number, row: any) => 
+      sum + 
+      (Number(row['Show Out']) || 0) + 
+      (Number(row['Show Recom']) || 0) + 
+      (Number(row['Show Inbound']) || 0), 0);
+    
+    // Create funnel data array
+    const funnelData = [
+      { etapa: 'Leads Ativados', valor: leadsAtivados },
+      { etapa: 'Conexões', valor: conexoes },
+      { etapa: 'Reuniões Agendadas', valor: reunioesAgendadas },
+      { etapa: 'Reuniões Acontecidas', valor: reunioesAcontecidas }
+    ];
+    
+    return funnelData;
+  } catch (error) {
+    console.error('Error fetching sales funnel data:', error);
+    return [];
+  }
 };
