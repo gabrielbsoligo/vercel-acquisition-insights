@@ -1,4 +1,3 @@
-
 import supabase from './supabaseService';
 import Papa from 'papaparse';
 
@@ -23,99 +22,89 @@ export const isDateInRange = (date: Date, from: Date, to: Date): boolean => {
   return date >= from && date <= to;
 };
 
-// Modified to handle both CSV and Supabase data sources
+// Map internal table names to Supabase table names
+const mapInternalToSupabaseTable = (internalName: string): string => {
+  const tableMapping: Record<string, string> = {
+    'sdr_meta': 'Meta Pre Venda',
+    'closer_meta': 'Meta Closer',
+    'empresa_meta': 'Meta Empresa',
+    'sdr_performance': 'Controle Pre Venda',
+    'closer_performance': 'Controle Closer',
+    'negociacoes': 'Negociacoes',
+    'recomendacao': 'Recomendacao',
+    'leadbroker': 'Leadbroker'
+  };
+  
+  return tableMapping[internalName] || internalName;
+};
+
+// Map internal table names to appropriate date column for filtering
+const getDateColumnForTable = (tableName: string): string | null => {
+  const dateColumnMapping: Record<string, string> = {
+    'Controle Pre Venda': 'Data',
+    'Controle Closer': 'Data', 
+    'Negociacoes': 'DATA DA REUNIÃO',
+    'Leadbroker': 'DATA DA COMPRA',
+    'Recomendacao': 'DATA DA RECOMENDAÇÃO',
+    'Outbound': 'DATA DO AGENDAMENTO'
+  };
+  
+  return dateColumnMapping[tableName] || null;
+};
+
+// Modified to use Supabase for data sources
 export const fetchFilteredData = async (
-  tableName: string,
+  internalTableName: string,
   dateRange: { from: Date, to: Date },
   additionalFilters?: Record<string, any>
 ) => {
   try {
-    // Check if Supabase is properly configured
-    const isSupabaseConfigured = 
-      import.meta.env.VITE_SUPABASE_URL && 
-      import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-    // Use Supabase if configured
-    if (isSupabaseConfigured) {
-      try {
-        let query = supabase.from(tableName).select('*');
-        
-        // Add date range filters if applicable
-        // Note: This assumes your table has a 'date' or similar column
-        // Adjust the column name based on your actual schema
-        
-        // Add any additional filters
-        if (additionalFilters) {
-          Object.entries(additionalFilters).forEach(([key, value]) => {
-            if (value !== undefined && value !== null) {
-              query = query.eq(key, value);
-            }
-          });
-        }
-        
-        const { data, error } = await query;
-        
-        if (error) {
-          console.error('Error fetching data from Supabase:', error);
-          throw error;
-        }
-        
-        return data || [];
-      } catch (error) {
-        console.warn('Error with Supabase query, falling back to CSV:', error);
-        return fetchCSVData(tableName);
-      }
-    } else {
-      // Fallback to CSV files if Supabase is not configured
-      console.warn('Falling back to CSV data as Supabase is not configured.');
-      return fetchCSVData(tableName);
-    }
-  } catch (error) {
-    console.error(`Error fetching data for ${tableName}:`, error);
-    return [];
-  }
-};
-
-// Helper function to fetch data from CSV files
-const fetchCSVData = async (tableName: string) => {
-  try {
-    const response = await fetch(`/src/data/${mapTableNameToFile(tableName)}`);
+    const supabaseTableName = mapInternalToSupabaseTable(internalTableName);
     
-    if (!response.ok) {
-      throw new Error(`Failed to fetch CSV file for ${tableName}: ${response.statusText}`);
+    // Start the query
+    let query = supabase.from(supabaseTableName).select('*');
+    
+    // Add date range filters if applicable
+    const dateColumn = getDateColumnForTable(supabaseTableName);
+    
+    // Add any additional filters
+    if (additionalFilters) {
+      Object.entries(additionalFilters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          query = query.eq(key, value);
+        }
+      });
     }
     
-    const csvText = await response.text();
+    const { data, error } = await query;
     
-    const { data } = Papa.parse(csvText, { header: true });
+    if (error) {
+      console.error(`Error fetching data from Supabase table ${supabaseTableName}:`, error);
+      throw error;
+    }
+    
+    // Filter by date range in JS for now since different tables have different date formats
+    // Later we can implement server-side filtering when date formats are standardized
+    if (dateColumn && data) {
+      return data.filter((row: any) => {
+        if (!row[dateColumn]) return true; // Include rows without dates
+        
+        const rowDate = parseDate(row[dateColumn]);
+        return isDateInRange(rowDate, dateRange.from, dateRange.to);
+      });
+    }
+    
     return data || [];
   } catch (error) {
-    console.error(`Error fetching CSV data for ${tableName}:`, error);
+    console.error(`Error fetching data for ${internalTableName}:`, error);
     return [];
   }
-};
-
-// Map table names to CSV file paths
-const mapTableNameToFile = (tableName: string): string => {
-  // Map Supabase table names to CSV file names
-  const mapping: Record<string, string> = {
-    'sdr_meta': 'Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - Meta Pré Venda (1).csv',
-    'closer_meta': 'Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - Meta Closer.csv',
-    'empresa_meta': 'Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - Meta Empresa.csv',
-    'sdr_performance': 'Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - Outbound.csv',
-    'closer_performance': 'Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - Controle de Performance Closer.csv',
-    'negociacoes': 'Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - Negociações BR.csv',
-    'recomendacao': 'Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - Recomendação.csv',
-    'leadbroker': 'Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - LeadBroker.csv',
-  };
-
-  return mapping[tableName] || `${tableName}.csv`;
 };
 
 // SDR related functions
 export const fetchSdrMetaData = async () => {
   try {
-    // Assuming SDR meta data is stored in a table/file named 'sdr_meta'
+    // Fetch from Meta Pre Venda table
     const data = await fetchFilteredData(
       'sdr_meta',
       { from: new Date(2020, 0, 1), to: new Date(2030, 11, 31) } // Wide date range to get all data
@@ -130,7 +119,7 @@ export const fetchSdrMetaData = async () => {
 // Closer related functions
 export const fetchCloserMetaData = async () => {
   try {
-    // Assuming closer meta data is stored in a table/file named 'closer_meta'
+    // Fetch from Meta Closer table
     const data = await fetchFilteredData(
       'closer_meta',
       { from: new Date(2020, 0, 1), to: new Date(2030, 11, 31) } // Wide date range to get all data
@@ -157,7 +146,7 @@ export const fetchNegociacoesData = async (
 
 export const fetchEmpresaMetaData = async () => {
   try {
-    // Assuming empresa meta data is stored in a table/file named 'empresa_meta'
+    // Fetch from Meta Empresa table
     const data = await fetchFilteredData(
       'empresa_meta',
       { from: new Date(2020, 0, 1), to: new Date(2030, 11, 31) } // Wide date range to get all data

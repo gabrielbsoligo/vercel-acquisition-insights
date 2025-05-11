@@ -25,13 +25,13 @@ export const fetchChannelsData = async (dateRange?: DateRange) => {
     const channelsPerformance = channels.map(channel => {
       // Filter negotiations by channel
       const channelNegotiations = negociacoesData.filter((row: any) => 
-        row.Canal === channel
+        row.ORIGEM === channel
       );
       
       const totalNegotiations = channelNegotiations.length;
       
       const totalValue = channelNegotiations.reduce((sum: number, row: any) => 
-        sum + (Number(row.Valor) || 0), 0);
+        sum + (Number(row.VALOR) || 0), 0);
       
       const avgTicket = totalNegotiations > 0 
         ? totalValue / totalNegotiations 
@@ -84,11 +84,11 @@ export const fetchLeadBrokerPerformanceData = async (dateRange?: DateRange) => {
     const normalizedDateRange = normalizeDateRange(dateRange);
     
     // Fetch lead broker data from Supabase
-    const leadBrokerData = await fetchFilteredData('lead_broker', normalizedDateRange);
+    const leadBrokerData = await fetchFilteredData('leadbroker', normalizedDateRange);
     
     // Calculate performance metrics
     const totalLeadsCost = leadBrokerData.reduce((sum: number, row: any) => 
-      sum + (Number(row['Custo Lead']) || 0), 0);
+      sum + (Number(row['VALOR']) || 0), 0);
     
     const totalLeadsCount = leadBrokerData.length;
     
@@ -98,7 +98,7 @@ export const fetchLeadBrokerPerformanceData = async (dateRange?: DateRange) => {
     
     // Get converted leads
     const convertedLeads = leadBrokerData.filter((row: any) => 
-      row.Status === 'Convertido'
+      row.STATUS === 'Convertido'
     ).length;
     
     const conversionRate = totalLeadsCount > 0 
@@ -107,8 +107,8 @@ export const fetchLeadBrokerPerformanceData = async (dateRange?: DateRange) => {
     
     // Calculate ROI
     const totalRevenue = leadBrokerData.reduce((sum: number, row: any) => {
-      if (row.Status === 'Convertido') {
-        return sum + (Number(row['Valor Contrato']) || 0);
+      if (row.STATUS === 'Convertido') {
+        return sum + (Number(row['VALOR']) || 0);
       }
       return sum;
     }, 0);
