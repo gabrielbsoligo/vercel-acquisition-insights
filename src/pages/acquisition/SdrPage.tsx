@@ -37,7 +37,7 @@ import {
   CalendarPlus,
   CalendarCheck,
   Link,
-  CalendarUp,
+  CalendarClock,
   Presentation,
 } from "lucide-react";
 import {
@@ -168,7 +168,7 @@ const SdrPage: React.FC = () => {
         <KpiCard 
           title="Tx. Conexões > Agendadas" 
           value="25.4%" 
-          icon={CalendarUp}
+          icon={CalendarClock}
           goal="30%"
           percentComplete={85}
         />

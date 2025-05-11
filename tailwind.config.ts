@@ -63,7 +63,7 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				// Add our brand red color
+				// Define brandRed with proper format
 				brandRed: '#e50915',
 			},
 			borderRadius: {
