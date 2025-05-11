@@ -1,3 +1,4 @@
+
 import supabase from './supabaseService';
 import Papa from 'papaparse';
 
@@ -73,6 +74,98 @@ export const fetchFilteredData = async (
     }
   } catch (error) {
     console.error(`Error fetching data for ${tableName}:`, error);
+    return [];
+  }
+};
+
+// Add these missing functions that are imported by other services
+// SDR related functions
+export const fetchSdrPerformanceData = async (
+  dateRange: { from: Date, to: Date },
+  selectedSdr?: string
+) => {
+  try {
+    const data = await fetchFilteredData(
+      'sdr_performance',
+      dateRange,
+      selectedSdr && selectedSdr !== 'all' ? { SDR: selectedSdr } : undefined
+    );
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching SDR performance data:', error);
+    return [];
+  }
+};
+
+export const fetchSdrMetaData = async () => {
+  try {
+    // Assuming SDR meta data is stored in a table/file named 'sdr_meta'
+    const data = await fetchFilteredData(
+      'sdr_meta',
+      { from: new Date(2020, 0, 1), to: new Date(2030, 11, 31) } // Wide date range to get all data
+    );
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching SDR meta data:', error);
+    return [];
+  }
+};
+
+// Closer related functions
+export const fetchCloserPerformanceData = async (
+  dateRange: { from: Date, to: Date },
+  selectedCloser?: string
+) => {
+  try {
+    const data = await fetchFilteredData(
+      'closer_performance',
+      dateRange,
+      selectedCloser && selectedCloser !== 'all' ? { Closer: selectedCloser } : undefined
+    );
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching closer performance data:', error);
+    return [];
+  }
+};
+
+export const fetchCloserMetaData = async () => {
+  try {
+    // Assuming closer meta data is stored in a table/file named 'closer_meta'
+    const data = await fetchFilteredData(
+      'closer_meta',
+      { from: new Date(2020, 0, 1), to: new Date(2030, 11, 31) } // Wide date range to get all data
+    );
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching closer meta data:', error);
+    return [];
+  }
+};
+
+// Channel related functions
+export const fetchNegociacoesData = async (
+  dateRange: { from: Date, to: Date }
+) => {
+  try {
+    const data = await fetchFilteredData('negociacoes', dateRange);
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching negociacoes data:', error);
+    return [];
+  }
+};
+
+export const fetchEmpresaMetaData = async () => {
+  try {
+    // Assuming empresa meta data is stored in a table/file named 'empresa_meta'
+    const data = await fetchFilteredData(
+      'empresa_meta',
+      { from: new Date(2020, 0, 1), to: new Date(2030, 11, 31) } // Wide date range to get all data
+    );
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching empresa meta data:', error);
     return [];
   }
 };
