@@ -1,5 +1,14 @@
+
 import { DateRange } from "react-day-picker";
-import { CSV_PATHS, loadCsvFile, parseDate, isDateInRange } from "./csvService";
+import { 
+  fetchSdrPerformanceData, 
+  fetchSdrMetaData,
+  fetchCloserPerformanceData,
+  fetchCloserMetaData,
+  fetchFilteredData,
+  parseDate,
+  isDateInRange
+} from "./dataSourceService";
 
 // Helper function to ensure DateRange has proper values
 const normalizeDateRange = (dateRange?: DateRange): { from: Date; to: Date } => {
@@ -29,42 +38,38 @@ export const fetchSdrKpiData = async (
 ) => {
   try {
     const normalizedDateRange = normalizeDateRange(dateRange);
-    const sdrPerformanceData = await loadCsvFile(CSV_PATHS.SDR_PERFORMANCE);
-    const sdrMetaData = await loadCsvFile(CSV_PATHS.SDR_META);
-
-    // Filter data by date range and SDR if specified
-    const filteredPerformanceData = sdrPerformanceData.filter((row: any) => {
-      if (!row.Data) return false;
-      
-      const rowDate = parseDate(row.Data);
-      const matchesDateRange = isDateInRange(rowDate, normalizedDateRange);
-      const matchesSdr = !selectedSdr || selectedSdr === 'all' || row.SDR === selectedSdr;
-      
-      return matchesDateRange && matchesSdr;
-    });
+    
+    // Fetch data from Supabase
+    const sdrPerformanceData = await fetchFilteredData(
+      'sdr_performance', 
+      normalizedDateRange,
+      selectedSdr && selectedSdr !== 'all' ? { SDR: selectedSdr } : undefined
+    );
+    
+    const sdrMetaData = await fetchSdrMetaData();
 
     // Calculate based on KPI type
     let valorRealizado = 0;
     
     switch (kpiType) {
       case 'leadsAtivados':
-        valorRealizado = filteredPerformanceData.reduce((sum: number, row: any) => 
+        valorRealizado = sdrPerformanceData.reduce((sum: number, row: any) => 
           sum + (Number(row['Empresas Ativadas']) || 0), 0);
         break;
         
       case 'ligacoesFeitas':
-        valorRealizado = filteredPerformanceData.reduce((sum: number, row: any) => 
+        valorRealizado = sdrPerformanceData.reduce((sum: number, row: any) => 
           sum + (Number(row['Ligações Realizadas']) || 0), 0);
         break;
         
       case 'ligacoesAtendidas':
-        valorRealizado = filteredPerformanceData.reduce((sum: number, row: any) => 
+        valorRealizado = sdrPerformanceData.reduce((sum: number, row: any) => 
           sum + (Number(row['Ligações Atendidas']) || 0), 0);
         break;
         
       case 'tempoLinha':
         // Assuming time is in format HH:MM:SS or similar
-        valorRealizado = filteredPerformanceData.reduce((sum: number, row: any) => {
+        valorRealizado = sdrPerformanceData.reduce((sum: number, row: any) => {
           if (!row.Tempo) return sum;
           
           // Try to parse time string to seconds
@@ -83,7 +88,7 @@ export const fetchSdrKpiData = async (
         break;
         
       case 'reunioesAgendadas':
-        valorRealizado = filteredPerformanceData.reduce((sum: number, row: any) => 
+        valorRealizado = sdrPerformanceData.reduce((sum: number, row: any) => 
           sum + 
           (Number(row['Marcadas Out']) || 0) + 
           (Number(row['Marcadas Recom']) || 0) + 
@@ -91,7 +96,7 @@ export const fetchSdrKpiData = async (
         break;
         
       case 'reunioesAcontecidas':
-        valorRealizado = filteredPerformanceData.reduce((sum: number, row: any) => 
+        valorRealizado = sdrPerformanceData.reduce((sum: number, row: any) => 
           sum + 
           (Number(row['Show Out']) || 0) + 
           (Number(row['Show Recom']) || 0) + 
@@ -99,10 +104,10 @@ export const fetchSdrKpiData = async (
         break;
         
       case 'taxaLeadsConexoes': {
-        const totalLeads = filteredPerformanceData.reduce((sum: number, row: any) => 
+        const totalLeads = sdrPerformanceData.reduce((sum: number, row: any) => 
           sum + (Number(row['Empresas Ativadas']) || 0), 0);
           
-        const totalConexoes = filteredPerformanceData.reduce((sum: number, row: any) => 
+        const totalConexoes = sdrPerformanceData.reduce((sum: number, row: any) => 
           sum + (Number(row['Novas Conexões Stakeholder']) || 0), 0);
           
         valorRealizado = totalLeads > 0 ? (totalConexoes / totalLeads) * 100 : 0;
@@ -110,10 +115,10 @@ export const fetchSdrKpiData = async (
       }
       
       case 'taxaConexoesAgendadas': {
-        const totalConexoes = filteredPerformanceData.reduce((sum: number, row: any) => 
+        const totalConexoes = sdrPerformanceData.reduce((sum: number, row: any) => 
           sum + (Number(row['Novas Conexões Stakeholder']) || 0), 0);
           
-        const totalAgendadas = filteredPerformanceData.reduce((sum: number, row: any) => 
+        const totalAgendadas = sdrPerformanceData.reduce((sum: number, row: any) => 
           sum + 
           (Number(row['Marcadas Out']) || 0) + 
           (Number(row['Marcadas Recom']) || 0) + 
@@ -124,13 +129,13 @@ export const fetchSdrKpiData = async (
       }
       
       case 'taxaAgendasAcontecidas': {
-        const totalAgendadas = filteredPerformanceData.reduce((sum: number, row: any) => 
+        const totalAgendadas = sdrPerformanceData.reduce((sum: number, row: any) => 
           sum + 
           (Number(row['Marcadas Out']) || 0) + 
           (Number(row['Marcadas Recom']) || 0) + 
           (Number(row['Marcadas Inbound']) || 0), 0);
           
-        const totalAcontecidas = filteredPerformanceData.reduce((sum: number, row: any) => 
+        const totalAcontecidas = sdrPerformanceData.reduce((sum: number, row: any) => 
           sum + 
           (Number(row['Show Out']) || 0) + 
           (Number(row['Show Recom']) || 0) + 
@@ -209,21 +214,16 @@ export const fetchSdrPerformanceData = async (
 ) => {
   try {
     const normalizedDateRange = normalizeDateRange(dateRange);
-    const sdrPerformanceData = await loadCsvFile(CSV_PATHS.SDR_PERFORMANCE);
     
-    // Filter data by date range
-    const filteredData = sdrPerformanceData.filter((row: any) => {
-      if (!row.Data) return false;
-      
-      const rowDate = parseDate(row.Data);
-      const matchesDateRange = isDateInRange(rowDate, normalizedDateRange);
-      const matchesSdr = !selectedSdr || selectedSdr === 'all' || row.SDR === selectedSdr;
-      
-      return matchesDateRange && matchesSdr;
-    });
+    // Fetch data from Supabase with filters
+    const sdrPerformanceData = await fetchFilteredData(
+      'sdr_performance', 
+      normalizedDateRange,
+      selectedSdr && selectedSdr !== 'all' ? { SDR: selectedSdr } : undefined
+    );
     
     // Get unique SDRs
-    const sdrs = Array.from(new Set(filteredData.map((row: any) => row.SDR))).filter(Boolean);
+    const sdrs = Array.from(new Set(sdrPerformanceData.map((row: any) => row.SDR))).filter(Boolean);
     
     // If a specific SDR is selected and it's not in the filtered data, add it
     if (selectedSdr && selectedSdr !== 'all' && !sdrs.includes(selectedSdr)) {
@@ -232,7 +232,7 @@ export const fetchSdrPerformanceData = async (
     
     // Calculate metrics for each SDR
     const sdrPerformance = sdrs.map((sdr: string) => {
-      const sdrData = filteredData.filter((row: any) => row.SDR === sdr);
+      const sdrData = sdrPerformanceData.filter((row: any) => row.SDR === sdr);
       
       const leadsAtivados = sdrData.reduce((sum: number, row: any) => 
         sum + (Number(row['Empresas Ativadas']) || 0), 0);
@@ -319,18 +319,13 @@ export const fetchSdrTrendData = async (
 ) => {
   try {
     const normalizedDateRange = normalizeDateRange(dateRange);
-    const sdrPerformanceData = await loadCsvFile(CSV_PATHS.SDR_PERFORMANCE);
     
-    // Filter data by date range and SDR
-    const filteredData = sdrPerformanceData.filter((row: any) => {
-      if (!row.Data) return false;
-      
-      const rowDate = parseDate(row.Data);
-      const matchesDateRange = isDateInRange(rowDate, normalizedDateRange);
-      const matchesSdr = !selectedSdr || selectedSdr === 'all' || row.SDR === selectedSdr;
-      
-      return matchesDateRange && matchesSdr;
-    });
+    // Fetch data from Supabase with filters
+    const sdrPerformanceData = await fetchFilteredData(
+      'sdr_performance', 
+      normalizedDateRange,
+      selectedSdr && selectedSdr !== 'all' ? { SDR: selectedSdr } : undefined
+    );
     
     // Determine granularity based on date range duration
     const durationInDays = Math.ceil(
@@ -347,7 +342,7 @@ export const fetchSdrTrendData = async (
     // Group data by selected granularity
     const periodMap = new Map();
     
-    filteredData.forEach((row: any) => {
+    sdrPerformanceData.forEach((row: any) => {
       const rowDate = parseDate(row.Data);
       if (!rowDate) return;
       
@@ -429,33 +424,28 @@ export const fetchSalesFunnelData = async (
 ) => {
   try {
     const normalizedDateRange = normalizeDateRange(dateRange);
-    const sdrPerformanceData = await loadCsvFile(CSV_PATHS.SDR_PERFORMANCE);
     
-    // Filter data by date range and SDR
-    const filteredData = sdrPerformanceData.filter((row: any) => {
-      if (!row.Data) return false;
-      
-      const rowDate = parseDate(row.Data);
-      const matchesDateRange = isDateInRange(rowDate, normalizedDateRange);
-      const matchesSdr = !selectedSdr || selectedSdr === 'all' || row.SDR === selectedSdr;
-      
-      return matchesDateRange && matchesSdr;
-    });
+    // Fetch data from Supabase with filters
+    const sdrPerformanceData = await fetchFilteredData(
+      'sdr_performance', 
+      normalizedDateRange,
+      selectedSdr && selectedSdr !== 'all' ? { SDR: selectedSdr } : undefined
+    );
     
     // Calculate funnel metrics
-    const leadsAtivados = filteredData.reduce((sum: number, row: any) => 
+    const leadsAtivados = sdrPerformanceData.reduce((sum: number, row: any) => 
       sum + (Number(row['Empresas Ativadas']) || 0), 0);
       
-    const conexoes = filteredData.reduce((sum: number, row: any) => 
+    const conexoes = sdrPerformanceData.reduce((sum: number, row: any) => 
       sum + (Number(row['Novas Conexões Stakeholder']) || 0), 0);
       
-    const reunioesAgendadas = filteredData.reduce((sum: number, row: any) => 
+    const reunioesAgendadas = sdrPerformanceData.reduce((sum: number, row: any) => 
       sum + 
       (Number(row['Marcadas Out']) || 0) + 
       (Number(row['Marcadas Recom']) || 0) + 
       (Number(row['Marcadas Inbound']) || 0), 0);
       
-    const reunioesAcontecidas = filteredData.reduce((sum: number, row: any) => 
+    const reunioesAcontecidas = sdrPerformanceData.reduce((sum: number, row: any) => 
       sum + 
       (Number(row['Show Out']) || 0) + 
       (Number(row['Show Recom']) || 0) + 
@@ -473,5 +463,340 @@ export const fetchSalesFunnelData = async (
   } catch (error) {
     console.error('Error fetching sales funnel data:', error);
     return [];
+  }
+};
+
+// Add closer-related functions
+
+// Fetch closer KPI data
+export const fetchCloserKpiData = async (
+  kpiType: string, 
+  dateRange?: DateRange, 
+  selectedCloser?: string
+) => {
+  try {
+    const normalizedDateRange = normalizeDateRange(dateRange);
+    
+    // Fetch data from Supabase
+    const closerPerformanceData = await fetchFilteredData(
+      'closer_performance', 
+      normalizedDateRange,
+      selectedCloser && selectedCloser !== 'all' ? { Closer: selectedCloser } : undefined
+    );
+    
+    const closerMetaData = await fetchCloserMetaData();
+
+    // Calculate based on KPI type
+    let valorRealizado = 0;
+    
+    switch (kpiType) {
+      case 'reunioesRealizadas':
+        valorRealizado = closerPerformanceData.reduce((sum: number, row: any) => 
+          sum + 
+          (Number(row['Show Inbound']) || 0) + 
+          (Number(row['Show Outbound']) || 0) + 
+          (Number(row['Show Indicação']) || 0) +
+          (Number(row['Show Outros']) || 0), 0);
+        break;
+        
+      case 'vendas':
+        valorRealizado = closerPerformanceData.reduce((sum: number, row: any) => 
+          sum + 
+          (Number(row['Vendas Inbound']) || 0) + 
+          (Number(row['Vendas Outbound']) || 0) + 
+          (Number(row['Vendas indicação']) || 0) +
+          (Number(row['Vendas Outros']) || 0), 0);
+        break;
+        
+      case 'taxaConversao': {
+        const totalReunioes = closerPerformanceData.reduce((sum: number, row: any) => 
+          sum + 
+          (Number(row['Show Inbound']) || 0) + 
+          (Number(row['Show Outbound']) || 0) + 
+          (Number(row['Show Indicação']) || 0) +
+          (Number(row['Show Outros']) || 0), 0);
+          
+        const totalVendas = closerPerformanceData.reduce((sum: number, row: any) => 
+          sum + 
+          (Number(row['Vendas Inbound']) || 0) + 
+          (Number(row['Vendas Outbound']) || 0) + 
+          (Number(row['Vendas indicação']) || 0) +
+          (Number(row['Vendas Outros']) || 0), 0);
+          
+        valorRealizado = totalReunioes > 0 ? (totalVendas / totalReunioes) * 100 : 0;
+        break;
+      }
+      
+      case 'indicacoesColetadas':
+        valorRealizado = closerPerformanceData.reduce((sum: number, row: any) => 
+          sum + (Number(row['Indicação Coletadas']) || 0), 0);
+        break;
+        
+      default:
+        valorRealizado = 0;
+    }
+
+    // Get meta from CLOSER_META data
+    let meta = 0;
+    const fromMonth = normalizedDateRange.from.getMonth() + 1; // Add 1 because JS months are 0-indexed
+    const fromYear = normalizedDateRange.from.getFullYear();
+    
+    // Map KPI types to meta types
+    const metaTypeMapping: Record<string, string> = {
+      'reunioesRealizadas': 'Número de negócios iniciados',
+      'vendas': 'Vendas',
+      'taxaConversao': 'Conversão',
+      'indicacoesColetadas': 'Indicações'
+    };
+    
+    const metaType = metaTypeMapping[kpiType];
+    
+    if (metaType) {
+      const filteredMetaData = closerMetaData.filter((row: any) => {
+        if (!row.Mês) return false;
+        
+        const rowDate = parseDate(row.Mês);
+        if (!rowDate) return false;
+        
+        const rowMonth = rowDate.getMonth() + 1;
+        const rowYear = rowDate.getFullYear();
+        
+        const matchesDate = rowMonth === fromMonth && rowYear === fromYear;
+        const matchesType = row.Tipo === metaType;
+        const matchesCloser = !selectedCloser || selectedCloser === 'all' || row.Closer === selectedCloser;
+        
+        return matchesDate && matchesType && matchesCloser;
+      });
+      
+      meta = filteredMetaData.reduce((sum: number, row: any) => sum + (Number(row.Valor) || 0), 0);
+    }
+
+    // Calculate percentage of completion
+    const percentComplete = meta > 0 ? (valorRealizado / meta) * 100 : 0;
+
+    return {
+      valorRealizado,
+      meta,
+      percentComplete
+    };
+  } catch (error) {
+    console.error(`Error fetching ${kpiType} closer KPI data:`, error);
+    return {
+      valorRealizado: 0,
+      meta: 0,
+      percentComplete: 0
+    };
+  }
+};
+
+// Fetch closer performance data for charts
+export const fetchCloserPerformanceDataForCharts = async (
+  dateRange?: DateRange, 
+  selectedCloser?: string
+) => {
+  try {
+    const normalizedDateRange = normalizeDateRange(dateRange);
+    
+    // Fetch data from Supabase with filters
+    const closerPerformanceData = await fetchFilteredData(
+      'closer_performance', 
+      normalizedDateRange,
+      selectedCloser && selectedCloser !== 'all' ? { Closer: selectedCloser } : undefined
+    );
+    
+    // Get unique closers
+    const closers = Array.from(new Set(closerPerformanceData.map((row: any) => row.Closer))).filter(Boolean);
+    
+    // If a specific closer is selected and it's not in the filtered data, add it
+    if (selectedCloser && selectedCloser !== 'all' && !closers.includes(selectedCloser)) {
+      closers.push(selectedCloser);
+    }
+    
+    // Calculate metrics for each closer
+    const closerPerformance = closers.map((closer: string) => {
+      const closerData = closerPerformanceData.filter((row: any) => row.Closer === closer);
+      
+      const reunioesRealizadas = closerData.reduce((sum: number, row: any) => 
+        sum + 
+        (Number(row['Show Inbound']) || 0) + 
+        (Number(row['Show Outbound']) || 0) + 
+        (Number(row['Show Indicação']) || 0) +
+        (Number(row['Show Outros']) || 0), 0);
+        
+      const vendas = closerData.reduce((sum: number, row: any) => 
+        sum + 
+        (Number(row['Vendas Inbound']) || 0) + 
+        (Number(row['Vendas Outbound']) || 0) + 
+        (Number(row['Vendas indicação']) || 0) +
+        (Number(row['Vendas Outros']) || 0), 0);
+        
+      const taxaConversao = reunioesRealizadas > 0 
+        ? (vendas / reunioesRealizadas) * 100 
+        : 0;
+        
+      const indicacoesColetadas = closerData.reduce((sum: number, row: any) => 
+        sum + (Number(row['Indicação Coletadas']) || 0), 0);
+      
+      return {
+        closerName: closer,
+        reunioesRealizadas,
+        vendas,
+        taxaConversao,
+        indicacoesColetadas
+      };
+    });
+    
+    // Add total for all closers
+    const totalReunioesRealizadas = closerPerformance.reduce((sum, closer) => sum + closer.reunioesRealizadas, 0);
+    const totalVendas = closerPerformance.reduce((sum, closer) => sum + closer.vendas, 0);
+    const totalTaxaConversao = totalReunioesRealizadas > 0 
+      ? (totalVendas / totalReunioesRealizadas) * 100 
+      : 0;
+    const totalIndicacoesColetadas = closerPerformance.reduce((sum, closer) => sum + closer.indicacoesColetadas, 0);
+    
+    closerPerformance.push({
+      closerName: 'Total Equipe',
+      reunioesRealizadas: totalReunioesRealizadas,
+      vendas: totalVendas,
+      taxaConversao: totalTaxaConversao,
+      indicacoesColetadas: totalIndicacoesColetadas
+    });
+    
+    return closerPerformance;
+  } catch (error) {
+    console.error('Error fetching closer performance data:', error);
+    return [];
+  }
+};
+
+// Fetch channels data
+export const fetchChannelsData = async (dateRange?: DateRange) => {
+  try {
+    const normalizedDateRange = normalizeDateRange(dateRange);
+    
+    // Fetch negotiations data from Supabase
+    const negociacoesData = await fetchFilteredData('negociacoes', normalizedDateRange);
+    
+    // Get channels data from the empresa_meta table
+    const empresaMetaData = await fetchEmpresaMetaData();
+    
+    // Calculate performance by channel
+    const channels = ['Leadbroker', 'Outbound', 'Recomendação'];
+    
+    const channelsPerformance = channels.map(channel => {
+      // Filter negotiations by channel
+      const channelNegotiations = negociacoesData.filter((row: any) => 
+        row.Canal === channel
+      );
+      
+      const totalNegotiations = channelNegotiations.length;
+      
+      const totalValue = channelNegotiations.reduce((sum: number, row: any) => 
+        sum + (Number(row.Valor) || 0), 0);
+      
+      const avgTicket = totalNegotiations > 0 
+        ? totalValue / totalNegotiations 
+        : 0;
+      
+      // Get meta for the channel
+      const fromMonth = normalizedDateRange.from.getMonth() + 1;
+      const fromYear = normalizedDateRange.from.getFullYear();
+      
+      const channelMeta = empresaMetaData.filter((row: any) => {
+        if (!row.Mês) return false;
+        
+        const rowDate = parseDate(row.Mês);
+        if (!rowDate) return false;
+        
+        const rowMonth = rowDate.getMonth() + 1;
+        const rowYear = rowDate.getFullYear();
+        
+        return rowMonth === fromMonth && 
+               rowYear === fromYear && 
+               row.Canal === channel;
+      });
+      
+      const mrrMeta = channelMeta.find((row: any) => row.Tipo === 'MRR')?.Valor || 0;
+      const oneTimeMeta = channelMeta.find((row: any) => row.Tipo === 'One Time')?.Valor || 0;
+      const totalMeta = Number(mrrMeta) + Number(oneTimeMeta);
+      
+      const percentComplete = totalMeta > 0 ? (totalValue / totalMeta) * 100 : 0;
+      
+      return {
+        channel,
+        totalNegotiations,
+        totalValue,
+        avgTicket,
+        meta: totalMeta,
+        percentComplete
+      };
+    });
+    
+    return channelsPerformance;
+  } catch (error) {
+    console.error('Error fetching channels data:', error);
+    return [];
+  }
+};
+
+// Fetch lead broker data
+export const fetchLeadBrokerPerformanceData = async (dateRange?: DateRange) => {
+  try {
+    const normalizedDateRange = normalizeDateRange(dateRange);
+    
+    // Fetch lead broker data from Supabase
+    const leadBrokerData = await fetchFilteredData('lead_broker', normalizedDateRange);
+    
+    // Calculate performance metrics
+    const totalLeadsCost = leadBrokerData.reduce((sum: number, row: any) => 
+      sum + (Number(row['Custo Lead']) || 0), 0);
+    
+    const totalLeadsCount = leadBrokerData.length;
+    
+    const avgCostPerLead = totalLeadsCount > 0 
+      ? totalLeadsCost / totalLeadsCount 
+      : 0;
+    
+    // Get converted leads
+    const convertedLeads = leadBrokerData.filter((row: any) => 
+      row.Status === 'Convertido'
+    ).length;
+    
+    const conversionRate = totalLeadsCount > 0 
+      ? (convertedLeads / totalLeadsCount) * 100 
+      : 0;
+    
+    // Calculate ROI
+    const totalRevenue = leadBrokerData.reduce((sum: number, row: any) => {
+      if (row.Status === 'Convertido') {
+        return sum + (Number(row['Valor Contrato']) || 0);
+      }
+      return sum;
+    }, 0);
+    
+    const roi = totalLeadsCost > 0 
+      ? ((totalRevenue - totalLeadsCost) / totalLeadsCost) * 100 
+      : 0;
+    
+    return {
+      totalLeadsCost,
+      totalLeadsCount,
+      avgCostPerLead,
+      convertedLeads,
+      conversionRate,
+      totalRevenue,
+      roi
+    };
+  } catch (error) {
+    console.error('Error fetching lead broker performance data:', error);
+    return {
+      totalLeadsCost: 0,
+      totalLeadsCount: 0,
+      avgCostPerLead: 0,
+      convertedLeads: 0,
+      conversionRate: 0,
+      totalRevenue: 0,
+      roi: 0
+    };
   }
 };
