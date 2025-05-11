@@ -1,7 +1,7 @@
 
 import { DateRange } from "react-day-picker";
 import { 
-  fetchCloserPerformanceData as fetchCloserPerformanceDataSource,
+  fetchCloserPerformanceData,
   fetchCloserMetaData,
   fetchFilteredData,
   parseDate
