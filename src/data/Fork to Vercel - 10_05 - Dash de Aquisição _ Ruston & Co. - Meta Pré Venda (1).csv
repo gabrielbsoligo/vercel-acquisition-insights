@@ -1,0 +1,23 @@
+Mês,SDR,Valor,Tipo
+01/05/2025,Gabi,200,Ativadas
+01/05/2025,Gabi,15,Acontecidas OUT
+01/05/2025,Gabi,20,Acontecidas INB
+01/05/2025,Jenni,200,Ativadas
+01/05/2025,Jenni,15,Acontecidas OUT
+01/05/2025,Jenni,20,Acontecidas INB
+01/04/2025,Gabi,200,Ativadas
+01/04/2025,Gabi,10,Acontecidas OUT
+01/04/2025,Gabi,20,Acontecidas INB
+01/04/2025,Jenni,200,Ativadas
+01/04/2025,Jenni,10,Acontecidas OUT
+01/04/2025,Jenni,20,Acontecidas INB
+01/04/2025,Jenni,20,Acontecidas RECOM
+01/04/2025,Jenni,20,Ligações Realizadas
+01/04/2025,Jenni,20,Ligações Atendidas
+01/04/2025,Jenni,20,Tempo total em linha
+01/04/2025,Jenni,20,Agendadas OUT
+01/04/2025,Jenni,20,Agendadas INB
+01/04/2025,Jenni,20,Agendadas RECOM
+01/04/2025,Jenni,20,Tx Ativadas > Conexões
+01/04/2025,Jenni,20,Tx Conexões > Agendadas
+01/04/2025,Jenni,20,Tx Agendadas > Acontecidas
