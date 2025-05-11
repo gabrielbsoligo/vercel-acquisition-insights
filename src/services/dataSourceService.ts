@@ -78,23 +78,6 @@ export const fetchFilteredData = async (
 };
 
 // SDR related functions
-export const fetchSdrPerformanceData = async (
-  dateRange: { from: Date, to: Date },
-  selectedSdr?: string
-) => {
-  try {
-    const data = await fetchFilteredData(
-      'sdr_performance',
-      dateRange,
-      selectedSdr && selectedSdr !== 'all' ? { SDR: selectedSdr } : undefined
-    );
-    return data || [];
-  } catch (error) {
-    console.error('Error fetching SDR performance data:', error);
-    return [];
-  }
-};
-
 export const fetchSdrMetaData = async () => {
   try {
     // Assuming SDR meta data is stored in a table/file named 'sdr_meta'
@@ -110,23 +93,6 @@ export const fetchSdrMetaData = async () => {
 };
 
 // Closer related functions
-export const fetchCloserPerformanceData = async (
-  dateRange: { from: Date, to: Date },
-  selectedCloser?: string
-) => {
-  try {
-    const data = await fetchFilteredData(
-      'closer_performance',
-      dateRange,
-      selectedCloser && selectedCloser !== 'all' ? { Closer: selectedCloser } : undefined
-    );
-    return data || [];
-  } catch (error) {
-    console.error('Error fetching closer performance data:', error);
-    return [];
-  }
-};
-
 export const fetchCloserMetaData = async () => {
   try {
     // Assuming closer meta data is stored in a table/file named 'closer_meta'

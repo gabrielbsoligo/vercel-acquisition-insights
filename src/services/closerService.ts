@@ -1,10 +1,9 @@
 
 import { DateRange } from "react-day-picker";
 import { 
-  fetchCloserPerformanceData,
-  fetchCloserMetaData,
   fetchFilteredData,
-  parseDate
+  parseDate,
+  fetchCloserMetaData
 } from "./dataSourceService";
 import { normalizeDateRange } from "./utils/dateUtils";
 
