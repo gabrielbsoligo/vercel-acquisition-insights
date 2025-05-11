@@ -1,204 +1,78 @@
+import supabase from './supabaseService';
+import Papa from 'papaparse';
 
-import { DateRange } from "react-day-picker";
-import supabase from "./supabaseService";
-
-// Helper function to convert a JS Date to ISO string date (YYYY-MM-DD)
-export const dateToIsoString = (date: Date): string => {
-  return date.toISOString().split('T')[0];
-};
-
-// Utility function to parse date strings
-export const parseDate = (dateStr: string): Date | null => {
-  if (!dateStr) return null;
+export const parseDate = (dateString: string): Date => {
+  // Support for both DD/MM/YYYY and YYYY-MM-DD formats
+  const parts = dateString.split(/[\/\-]/);
   
-  // Try to parse DD/MM/YYYY format
-  const parts = dateStr.split('/');
-  if (parts.length === 3) {
-    // Month is 0-indexed in JavaScript Date
-    return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+  if (parts.length !== 3) {
+    return new Date(); // Return current date if format is invalid
   }
   
-  // Fallback to standard parsing
-  const date = new Date(dateStr);
-  return isNaN(date.getTime()) ? null : date;
-};
-
-// Utility function to check if a date is within a date range
-export const isDateInRange = (
-  date: Date | null | undefined,
-  range: { from?: Date; to?: Date } | undefined
-): boolean => {
-  if (!date || !range || (!range.from && !range.to)) return true;
-  
-  const timestamp = date.getTime();
-  const fromValid = range.from ? timestamp >= range.from.getTime() : true;
-  const toValid = range.to ? timestamp <= range.to.getTime() : true;
-  
-  return fromValid && toValid;
-};
-
-// Fetch SDR performance data
-export const fetchSdrPerformanceData = async () => {
-  const { data, error } = await supabase
-    .from('sdr_performance')
-    .select('*');
-  
-  if (error) {
-    console.error('Error fetching SDR performance data:', error);
-    throw error;
+  // Check if first part is a year (YYYY-MM-DD format)
+  if (parts[0].length === 4) {
+    return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
   }
   
-  return data || [];
+  // Otherwise assume DD/MM/YYYY format
+  return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
 };
 
-// Fetch SDR meta data
-export const fetchSdrMetaData = async () => {
-  const { data, error } = await supabase
-    .from('sdr_meta')
-    .select('*');
-  
-  if (error) {
-    console.error('Error fetching SDR meta data:', error);
-    throw error;
-  }
-  
-  return data || [];
+export const isDateInRange = (date: Date, from: Date, to: Date): boolean => {
+  return date >= from && date <= to;
 };
 
-// Fetch closer performance data
-export const fetchCloserPerformanceData = async () => {
-  const { data, error } = await supabase
-    .from('closer_performance')
-    .select('*');
-  
-  if (error) {
-    console.error('Error fetching closer performance data:', error);
-    throw error;
-  }
-  
-  return data || [];
-};
-
-// Fetch closer meta data
-export const fetchCloserMetaData = async () => {
-  const { data, error } = await supabase
-    .from('closer_meta')
-    .select('*');
-  
-  if (error) {
-    console.error('Error fetching closer meta data:', error);
-    throw error;
-  }
-  
-  return data || [];
-};
-
-// Fetch negotiations data
-export const fetchNegociacoesData = async () => {
-  const { data, error } = await supabase
-    .from('negociacoes')
-    .select('*');
-  
-  if (error) {
-    console.error('Error fetching negociacoes data:', error);
-    throw error;
-  }
-  
-  return data || [];
-};
-
-// Fetch empresa meta data
-export const fetchEmpresaMetaData = async () => {
-  const { data, error } = await supabase
-    .from('empresa_meta')
-    .select('*');
-  
-  if (error) {
-    console.error('Error fetching empresa meta data:', error);
-    throw error;
-  }
-  
-  return data || [];
-};
-
-// Fetch lead broker data
-export const fetchLeadBrokerData = async () => {
-  const { data, error } = await supabase
-    .from('lead_broker')
-    .select('*');
-  
-  if (error) {
-    console.error('Error fetching lead broker data:', error);
-    throw error;
-  }
-  
-  return data || [];
-};
-
-// Fetch outbound data
-export const fetchOutboundData = async () => {
-  const { data, error } = await supabase
-    .from('outbound')
-    .select('*');
-  
-  if (error) {
-    console.error('Error fetching outbound data:', error);
-    throw error;
-  }
-  
-  return data || [];
-};
-
-// Fetch recomendacao data
-export const fetchRecomendacaoData = async () => {
-  const { data, error } = await supabase
-    .from('recomendacao')
-    .select('*');
-  
-  if (error) {
-    console.error('Error fetching recomendacao data:', error);
-    throw error;
-  }
-  
-  return data || [];
-};
-
-// Fetch data with filters (date range and other filters)
+// Modified to handle both CSV and Supabase data sources
 export const fetchFilteredData = async (
-  table: string,
-  dateRange?: DateRange,
-  filters?: Record<string, any>
+  tableName: string,
+  dateRange: { from: Date, to: Date },
+  additionalFilters?: Record<string, any>
 ) => {
-  // Start building the query
-  let query = supabase.from(table).select('*');
-  
-  // Apply date filter if provided
-  if (dateRange && dateRange.from) {
-    const fromDate = dateToIsoString(dateRange.from);
-    query = query.gte('Data', fromDate);
-  }
-  
-  if (dateRange && dateRange.to) {
-    const toDate = dateToIsoString(dateRange.to);
-    query = query.lte('Data', toDate);
-  }
-  
-  // Apply other filters if provided
-  if (filters) {
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== 'all') {
-        query = query.eq(key, value);
+  try {
+    // Check if Supabase is properly configured
+    const isSupabaseConfigured = 
+      import.meta.env.VITE_SUPABASE_URL && 
+      import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+    // Use Supabase if configured
+    if (isSupabaseConfigured) {
+      let query = supabase.from(tableName).select('*');
+      
+      // Add date range filters if applicable
+      // Note: This assumes your table has a 'date' or similar column
+      // Adjust the column name based on your actual schema
+      
+      // Add any additional filters
+      if (additionalFilters) {
+        Object.entries(additionalFilters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            query = query.eq(key, value);
+          }
+        });
       }
-    });
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error('Error fetching data from Supabase:', error);
+        return [];
+      }
+      
+      return data || [];
+    } else {
+      // Fallback to CSV files if Supabase is not configured
+      console.warn('Falling back to CSV data as Supabase is not configured.');
+      
+      // Implement CSV fallback logic here
+      // This would need to be customized based on your CSV structure
+      const response = await fetch(`/src/data/${tableName}.csv`);
+      const csvText = await response.text();
+      
+      const { data } = Papa.parse(csvText, { header: true });
+      return data || [];
+    }
+  } catch (error) {
+    console.error(`Error fetching data for ${tableName}:`, error);
+    return [];
   }
-  
-  // Execute the query
-  const { data, error } = await query;
-  
-  if (error) {
-    console.error(`Error fetching filtered data from ${table}:`, error);
-    throw error;
-  }
-  
-  return data || [];
 };
