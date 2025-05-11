@@ -1,3 +1,4 @@
+
 import supabase from './supabaseService';
 import Papa from 'papaparse';
 
@@ -36,45 +37,79 @@ export const fetchFilteredData = async (
       
     // Use Supabase if configured
     if (isSupabaseConfigured) {
-      let query = supabase.from(tableName).select('*');
-      
-      // Add date range filters if applicable
-      // Note: This assumes your table has a 'date' or similar column
-      // Adjust the column name based on your actual schema
-      
-      // Add any additional filters
-      if (additionalFilters) {
-        Object.entries(additionalFilters).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) {
-            query = query.eq(key, value);
-          }
-        });
+      try {
+        let query = supabase.from(tableName).select('*');
+        
+        // Add date range filters if applicable
+        // Note: This assumes your table has a 'date' or similar column
+        // Adjust the column name based on your actual schema
+        
+        // Add any additional filters
+        if (additionalFilters) {
+          Object.entries(additionalFilters).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+              query = query.eq(key, value);
+            }
+          });
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) {
+          console.error('Error fetching data from Supabase:', error);
+          throw error;
+        }
+        
+        return data || [];
+      } catch (error) {
+        console.warn('Error with Supabase query, falling back to CSV:', error);
+        return fetchCSVData(tableName);
       }
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error('Error fetching data from Supabase:', error);
-        return [];
-      }
-      
-      return data || [];
     } else {
       // Fallback to CSV files if Supabase is not configured
       console.warn('Falling back to CSV data as Supabase is not configured.');
-      
-      // Implement CSV fallback logic here
-      // This would need to be customized based on your CSV structure
-      const response = await fetch(`/src/data/${tableName}.csv`);
-      const csvText = await response.text();
-      
-      const { data } = Papa.parse(csvText, { header: true });
-      return data || [];
+      return fetchCSVData(tableName);
     }
   } catch (error) {
     console.error(`Error fetching data for ${tableName}:`, error);
     return [];
   }
+};
+
+// Helper function to fetch data from CSV files
+const fetchCSVData = async (tableName: string) => {
+  try {
+    const response = await fetch(`/src/data/${mapTableNameToFile(tableName)}`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch CSV file for ${tableName}: ${response.statusText}`);
+    }
+    
+    const csvText = await response.text();
+    
+    const { data } = Papa.parse(csvText, { header: true });
+    return data || [];
+  } catch (error) {
+    console.error(`Error fetching CSV data for ${tableName}:`, error);
+    return [];
+  }
+};
+
+// Map table names to CSV file paths
+const mapTableNameToFile = (tableName: string): string => {
+  // Map Supabase table names to CSV file names
+  const mapping: Record<string, string> = {
+    'sdr_meta': 'Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - Meta Pré Venda (1).csv',
+    'closer_meta': 'Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - Meta Closer.csv',
+    'empresa_meta': 'Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - Meta Empresa.csv',
+    'sdr_performance': 'Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - Outbound.csv',
+    'closer_performance': 'Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - Controle de Performance Closer.csv',
+    'negociacoes': 'Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - Negociações BR.csv',
+    'recomendacao': 'Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - Recomendação.csv',
+    'leadbroker': 'Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - LeadBroker.csv',
+  };
+
+  return mapping[tableName] || `${tableName}.csv`;
 };
 
 // SDR related functions
