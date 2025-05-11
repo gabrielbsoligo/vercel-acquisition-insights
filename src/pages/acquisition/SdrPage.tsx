@@ -38,46 +38,125 @@ import {
   CalendarCheck,
   Link,
   CalendarClock,
-  Presentation,
 } from "lucide-react";
 import {
   fetchSdrKpiData,
   fetchSdrPerformanceData,
+  fetchSdrTrendData,
   fetchSalesFunnelData,
 } from "@/services/dataService";
 
 const SdrPage: React.FC = () => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: new Date(2025, 4, 1), // May 1, 2025
-    to: new Date(2025, 4, 31), // May 31, 2025
+    from: new Date(2025, 3, 1), // April 1, 2025
+    to: new Date(2025, 4, 10), // May 10, 2025
   });
   const [selectedSdr, setSelectedSdr] = useState<string>("all");
+  
+  // State for KPI data
+  const [leadsActivated, setLeadsActivated] = useState({ value: 0, goal: 0, percent: 0 });
+  const [callsMade, setCallsMade] = useState({ value: 0, goal: 0, percent: 0 });
+  const [callsAnswered, setCallsAnswered] = useState({ value: 0, goal: 0, percent: 0 });
+  const [timeInLine, setTimeInLine] = useState({ value: "00:00:00", goal: 0, percent: 0 });
+  const [meetingsScheduled, setMeetingsScheduled] = useState({ value: 0, goal: 0, percent: 0 });
+  const [meetingsHeld, setMeetingsHeld] = useState({ value: 0, goal: 0, percent: 0 });
+  const [leadsToConnectionsRate, setLeadsToConnectionsRate] = useState({ value: 0, goal: 0, percent: 0 });
+  const [connectionsToScheduledRate, setConnectionsToScheduledRate] = useState({ value: 0, goal: 0, percent: 0 });
   
   // State for chart data
   const [performanceData, setPerformanceData] = useState<any[]>([]);
   const [trendData, setTrendData] = useState<any[]>([]);
   const [funnelData, setFunnelData] = useState<any[]>([]);
+  const [tableData, setTableData] = useState<any[]>([]);
+  
+  // Loading states
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Mock data for demonstration
+  // Load data when filters change
   useEffect(() => {
-    // In a real app, this would fetch from the CSV files based on the filters
     const loadData = async () => {
-      const sdrPerformance = await fetchSdrPerformanceData(dateRange, selectedSdr);
-      setPerformanceData(sdrPerformance);
-
-      // Mock trend data
-      setTrendData([
-        { periodo: "01/05", leadsAtivados: 20, reunioesAgendadas: 8, reunioesAcontecidas: 6 },
-        { periodo: "02/05", leadsAtivados: 22, reunioesAgendadas: 9, reunioesAcontecidas: 7 },
-        { periodo: "03/05", leadsAtivados: 25, reunioesAgendadas: 11, reunioesAcontecidas: 8 },
-        { periodo: "04/05", leadsAtivados: 18, reunioesAgendadas: 7, reunioesAcontecidas: 5 },
-        { periodo: "05/05", leadsAtivados: 24, reunioesAgendadas: 10, reunioesAcontecidas: 8 },
-        { periodo: "06/05", leadsAtivados: 27, reunioesAgendadas: 12, reunioesAcontecidas: 9 },
-        { periodo: "07/05", leadsAtivados: 25, reunioesAgendadas: 11, reunioesAcontecidas: 8 },
-      ]);
-
-      const funnel = await fetchSalesFunnelData(dateRange, selectedSdr);
-      setFunnelData(funnel);
+      setIsLoading(true);
+      try {
+        // Load KPI data
+        const leadsData = await fetchSdrKpiData("leadsAtivados", dateRange, selectedSdr);
+        setLeadsActivated({ 
+          value: leadsData.valorRealizado, 
+          goal: leadsData.meta || 0, 
+          percent: leadsData.percentComplete || 0 
+        });
+        
+        const callsData = await fetchSdrKpiData("ligacoesFeitas", dateRange, selectedSdr);
+        setCallsMade({ 
+          value: callsData.valorRealizado, 
+          goal: callsData.meta || 0, 
+          percent: callsData.percentComplete || 0 
+        });
+        
+        const answeredData = await fetchSdrKpiData("ligacoesAtendidas", dateRange, selectedSdr);
+        setCallsAnswered({ 
+          value: answeredData.valorRealizado, 
+          goal: answeredData.meta || 0, 
+          percent: answeredData.percentComplete || 0 
+        });
+        
+        const timeData = await fetchSdrKpiData("tempoLinha", dateRange, selectedSdr);
+        // Convert seconds to HH:MM:SS format
+        const hours = Math.floor(timeData.valorRealizado / 3600);
+        const minutes = Math.floor((timeData.valorRealizado % 3600) / 60);
+        const seconds = timeData.valorRealizado % 60;
+        const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        setTimeInLine({ 
+          value: formattedTime, 
+          goal: timeData.meta || 0, 
+          percent: timeData.percentComplete || 0 
+        });
+        
+        const meetingsScheduledData = await fetchSdrKpiData("reunioesAgendadas", dateRange, selectedSdr);
+        setMeetingsScheduled({ 
+          value: meetingsScheduledData.valorRealizado, 
+          goal: meetingsScheduledData.meta || 0, 
+          percent: meetingsScheduledData.percentComplete || 0 
+        });
+        
+        const meetingsHeldData = await fetchSdrKpiData("reunioesAcontecidas", dateRange, selectedSdr);
+        setMeetingsHeld({ 
+          value: meetingsHeldData.valorRealizado, 
+          goal: meetingsHeldData.meta || 0, 
+          percent: meetingsHeldData.percentComplete || 0 
+        });
+        
+        const leadsToConnectionsData = await fetchSdrKpiData("taxaLeadsConexoes", dateRange, selectedSdr);
+        setLeadsToConnectionsRate({ 
+          value: Number(leadsToConnectionsData.valorRealizado.toFixed(1)), 
+          goal: leadsToConnectionsData.meta || 0, 
+          percent: leadsToConnectionsData.percentComplete || 0 
+        });
+        
+        const connectionsToScheduledData = await fetchSdrKpiData("taxaConexoesAgendadas", dateRange, selectedSdr);
+        setConnectionsToScheduledRate({ 
+          value: Number(connectionsToScheduledData.valorRealizado.toFixed(1)), 
+          goal: connectionsToScheduledData.meta || 0, 
+          percent: connectionsToScheduledData.percentComplete || 0 
+        });
+        
+        // Load chart data
+        const sdrPerformance = await fetchSdrPerformanceData(dateRange, selectedSdr);
+        setPerformanceData(sdrPerformance);
+        setTableData(sdrPerformance);
+        
+        // Load trend data
+        const trends = await fetchSdrTrendData(dateRange, selectedSdr);
+        setTrendData(trends);
+        
+        // Load funnel data
+        const funnel = await fetchSalesFunnelData(dateRange, selectedSdr);
+        setFunnelData(funnel);
+      } catch (error) {
+        console.error("Error loading data:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     loadData();
@@ -103,8 +182,8 @@ const SdrPage: React.FC = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os SDRs</SelectItem>
-              <SelectItem value="gabi">Gabi</SelectItem>
-              <SelectItem value="jenni">Jenni</SelectItem>
+              <SelectItem value="Gabi">Gabi</SelectItem>
+              <SelectItem value="Jenni">Jenni</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -114,31 +193,31 @@ const SdrPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <KpiCard 
           title="Leads Ativados" 
-          value="137" 
+          value={leadsActivated.value} 
           icon={Users}
-          goal="200"
-          percentComplete={68}
+          goal={leadsActivated.goal}
+          percentComplete={leadsActivated.percent}
         />
         <KpiCard 
           title="Ligações Feitas" 
-          value="945" 
+          value={callsMade.value} 
           icon={PhoneCall} 
-          goal="1000"
-          percentComplete={95}
+          goal={callsMade.goal}
+          percentComplete={callsMade.percent}
         />
         <KpiCard 
           title="Ligações Atendidas" 
-          value="385" 
+          value={callsAnswered.value} 
           icon={PhoneForwarded}
-          goal="450"
-          percentComplete={86}
+          goal={callsAnswered.goal}
+          percentComplete={callsAnswered.percent}
         />
         <KpiCard 
           title="Tempo em Linha" 
-          value="05:12:34" 
+          value={timeInLine.value} 
           icon={Clock}
-          goal="06:00:00"
-          percentComplete={87}
+          goal={timeInLine.goal}
+          percentComplete={timeInLine.percent}
         />
       </div>
 
@@ -146,31 +225,31 @@ const SdrPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <KpiCard 
           title="Reuniões Agendadas" 
-          value="52" 
+          value={meetingsScheduled.value} 
           icon={CalendarPlus}
-          goal="60"
-          percentComplete={87}
+          goal={meetingsScheduled.goal}
+          percentComplete={meetingsScheduled.percent}
         />
         <KpiCard 
           title="Reuniões Acontecidas" 
-          value="38" 
+          value={meetingsHeld.value} 
           icon={CalendarCheck}
-          goal="45"
-          percentComplete={84}
+          goal={meetingsHeld.goal}
+          percentComplete={meetingsHeld.percent}
         />
         <KpiCard 
           title="Tx. Ativados > Conexões" 
-          value="72.5%" 
+          value={`${leadsToConnectionsRate.value}%`} 
           icon={Link}
-          goal="80%"
-          percentComplete={90}
+          goal={`${leadsToConnectionsRate.goal}%`}
+          percentComplete={leadsToConnectionsRate.percent}
         />
         <KpiCard 
           title="Tx. Conexões > Agendadas" 
-          value="25.4%" 
+          value={`${connectionsToScheduledRate.value}%`} 
           icon={CalendarClock}
-          goal="30%"
-          percentComplete={85}
+          goal={`${connectionsToScheduledRate.goal}%`}
+          percentComplete={connectionsToScheduledRate.percent}
         />
       </div>
 
@@ -182,18 +261,24 @@ const SdrPage: React.FC = () => {
             <CardTitle>Performance por SDR</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={performanceData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="sdrName" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="leadsAtivados" name="Leads Ativados" fill="#e50915" />
-                <Bar dataKey="reunioesAgendadas" name="Reuniões Agendadas" fill="#3b82f6" />
-                <Bar dataKey="reunioesAcontecidas" name="Reuniões Acontecidas" fill="#10b981" />
-              </BarChart>
-            </ResponsiveContainer>
+            {isLoading ? (
+              <div className="flex items-center justify-center h-[300px]">
+                <p>Carregando dados...</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={performanceData.filter(item => item.sdrName !== 'Total Equipe')}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="sdrName" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="leadsAtivados" name="Leads Ativados" fill="#e50915" />
+                  <Bar dataKey="reunioesAgendadas" name="Reuniões Agendadas" fill="#3b82f6" />
+                  <Bar dataKey="reunioesAcontecidas" name="Reuniões Acontecidas" fill="#10b981" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -203,20 +288,26 @@ const SdrPage: React.FC = () => {
             <CardTitle>Funil de Pré-Vendas</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart 
-                layout="vertical" 
-                data={funnelData}
-                margin={{ top: 20, right: 30, left: 40, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="etapa" type="category" />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="valor" fill="#e50915" />
-              </BarChart>
-            </ResponsiveContainer>
+            {isLoading ? (
+              <div className="flex items-center justify-center h-[300px]">
+                <p>Carregando dados...</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart 
+                  layout="vertical" 
+                  data={funnelData}
+                  margin={{ top: 20, right: 30, left: 40, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" />
+                  <YAxis dataKey="etapa" type="category" />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="valor" fill="#e50915" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -227,18 +318,24 @@ const SdrPage: React.FC = () => {
           <CardTitle>Tendências (Leads, Agendadas, Acontecidas)</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={trendData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="periodo" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="leadsAtivados" name="Leads Ativados" stroke="#e50915" />
-              <Line type="monotone" dataKey="reunioesAgendadas" name="Reuniões Agendadas" stroke="#3b82f6" />
-              <Line type="monotone" dataKey="reunioesAcontecidas" name="Reuniões Acontecidas" stroke="#10b981" />
-            </LineChart>
-          </ResponsiveContainer>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-[300px]">
+              <p>Carregando dados...</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={trendData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="periodo" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="leadsAtivados" name="Leads Ativados" stroke="#e50915" />
+                <Line type="monotone" dataKey="reunioesAgendadas" name="Reuniões Agendadas" stroke="#3b82f6" />
+                <Line type="monotone" dataKey="reunioesAcontecidas" name="Reuniões Acontecidas" stroke="#10b981" />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
 
@@ -263,36 +360,43 @@ const SdrPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-b">
-                  <td className="p-2">Gabi</td>
-                  <td className="p-2">120</td>
-                  <td className="p-2">88</td>
-                  <td className="p-2">45</td>
-                  <td className="p-2">30</td>
-                  <td className="p-2">73.3%</td>
-                  <td className="p-2">51.1%</td>
-                  <td className="p-2">66.7%</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="p-2">Jenni</td>
-                  <td className="p-2">135</td>
-                  <td className="p-2">97</td>
-                  <td className="p-2">52</td>
-                  <td className="p-2">38</td>
-                  <td className="p-2">71.9%</td>
-                  <td className="p-2">53.6%</td>
-                  <td className="p-2">73.1%</td>
-                </tr>
-                <tr className="bg-muted/20">
-                  <td className="p-2 font-medium">Total Equipe</td>
-                  <td className="p-2 font-medium">255</td>
-                  <td className="p-2 font-medium">185</td>
-                  <td className="p-2 font-medium">97</td>
-                  <td className="p-2 font-medium">68</td>
-                  <td className="p-2 font-medium">72.5%</td>
-                  <td className="p-2 font-medium">52.4%</td>
-                  <td className="p-2 font-medium">70.1%</td>
-                </tr>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={8} className="text-center p-4">Carregando dados...</td>
+                  </tr>
+                ) : (
+                  tableData.map((row, index) => (
+                    <tr 
+                      key={index} 
+                      className={`border-b ${row.sdrName === 'Total Equipe' ? 'bg-muted/20' : ''}`}
+                    >
+                      <td className={`p-2 ${row.sdrName === 'Total Equipe' ? 'font-medium' : ''}`}>
+                        {row.sdrName}
+                      </td>
+                      <td className={`p-2 ${row.sdrName === 'Total Equipe' ? 'font-medium' : ''}`}>
+                        {row.leadsAtivados}
+                      </td>
+                      <td className={`p-2 ${row.sdrName === 'Total Equipe' ? 'font-medium' : ''}`}>
+                        {row.conexoes}
+                      </td>
+                      <td className={`p-2 ${row.sdrName === 'Total Equipe' ? 'font-medium' : ''}`}>
+                        {row.reunioesAgendadas}
+                      </td>
+                      <td className={`p-2 ${row.sdrName === 'Total Equipe' ? 'font-medium' : ''}`}>
+                        {row.reunioesAcontecidas}
+                      </td>
+                      <td className={`p-2 ${row.sdrName === 'Total Equipe' ? 'font-medium' : ''}`}>
+                        {row.taxaLeadsConexoes.toFixed(1)}%
+                      </td>
+                      <td className={`p-2 ${row.sdrName === 'Total Equipe' ? 'font-medium' : ''}`}>
+                        {row.taxaConexoesAgendadas.toFixed(1)}%
+                      </td>
+                      <td className={`p-2 ${row.sdrName === 'Total Equipe' ? 'font-medium' : ''}`}>
+                        {row.taxaAgendasAcontecidas.toFixed(1)}%
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

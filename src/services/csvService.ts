@@ -1,7 +1,5 @@
 
-// This service will handle CSV file loading and parsing
-// In a real application, this would be used to load the CSV files from a specific location
-
+// This service handles CSV file loading and parsing
 import Papa from 'papaparse';
 
 interface CsvLoadOptions {
@@ -41,13 +39,43 @@ export const loadCsvFile = async (
 
 // Define paths to CSV files - these would be updated to point to the actual file locations
 export const CSV_PATHS = {
-  SDR_PERFORMANCE: '/data/Controle de Performance Pré Venda.csv',
-  SDR_META: '/data/Meta Pré Venda.csv',
-  CLOSER_PERFORMANCE: '/data/Controle de Performance Closer.csv',
-  NEGOCIACOES: '/data/Negociações BR.csv',
-  CLOSER_META: '/data/Meta Closer.csv',
-  EMPRESA_META: '/data/Meta Empresa.csv',
-  LEAD_BROKER: '/data/LeadBroker.csv',
-  OUTBOUND: '/data/Outbound.csv',
-  RECOMENDACAO: '/data/Recomendação.csv',
+  SDR_PERFORMANCE: '/src/data/Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - Controle de Performance Pré Venda.csv',
+  SDR_META: '/src/data/Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - Meta Pré Venda (1).csv',
+  CLOSER_PERFORMANCE: '/src/data/Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - Controle de Performance Closer.csv',
+  NEGOCIACOES: '/src/data/Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - Negociações BR.csv',
+  CLOSER_META: '/src/data/Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - Meta Closer.csv',
+  EMPRESA_META: '/src/data/Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - Meta Empresa.csv',
+  LEAD_BROKER: '/src/data/Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - LeadBroker.csv',
+  OUTBOUND: '/src/data/Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - Outbound.csv',
+  RECOMENDACAO: '/src/data/Fork to Vercel - 10_05 - Dash de Aquisição _ Ruston & Co. - Recomendação.csv',
+};
+
+// Utility function to parse date strings from CSV files
+export const parseDate = (dateStr: string): Date | null => {
+  if (!dateStr) return null;
+  
+  // Try to parse DD/MM/YYYY format
+  const parts = dateStr.split('/');
+  if (parts.length === 3) {
+    // Month is 0-indexed in JavaScript Date
+    return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+  }
+  
+  // Fallback to standard parsing
+  const date = new Date(dateStr);
+  return isNaN(date.getTime()) ? null : date;
+};
+
+// Utility function to check if a date is within a date range
+export const isDateInRange = (
+  date: Date | null | undefined,
+  range: { from: Date | undefined; to: Date | undefined } | undefined
+): boolean => {
+  if (!date || !range || (!range.from && !range.to)) return true;
+  
+  const timestamp = date.getTime();
+  const fromValid = range.from ? timestamp >= range.from.getTime() : true;
+  const toValid = range.to ? timestamp <= range.to.getTime() : true;
+  
+  return fromValid && toValid;
 };
