@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { DateRange } from "react-day-picker";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -74,33 +73,37 @@ const CloserPage: React.FC = () => {
   useEffect(() => {
     // In a real app, this would fetch from the CSV files based on the filters
     const loadData = async () => {
-      const closerPerformance = await fetchCloserPerformanceData(dateRangeStart, dateRangeEnd, selectedCloser, selectedOrigin);
-      setCloserPerformanceData(closerPerformance);
+      try {
+        const closerPerformance = await fetchCloserPerformanceData(dateRangeStart, selectedCloser);
+        setCloserPerformanceData(closerPerformance);
 
-      const salesFunnel = await fetchSalesFunnelData(dateRangeStart, dateRangeEnd, selectedCloser);
-      setSalesFunnelData([
-        { etapa: "Oportunidades Iniciadas", valor: 100 },
-        { etapa: "Negociação", valor: 60 },
-        { etapa: "Ganhos", valor: 32 },
-        { etapa: "Perdidos", valor: 28 },
-      ]);
+        const salesFunnel = await fetchSalesFunnelData(dateRangeStart, selectedCloser);
+        setSalesFunnelData([
+          { etapa: "Oportunidades Iniciadas", valor: 100 },
+          { etapa: "Negociação", valor: 60 },
+          { etapa: "Ganhos", valor: 32 },
+          { etapa: "Perdidos", valor: 28 },
+        ]);
 
-      setCycleSalesData([
-        { faixaCiclo: "0-7 dias", quantidade: 5 },
-        { faixaCiclo: "8-14 dias", quantidade: 12 },
-        { faixaCiclo: "15-30 dias", quantidade: 8 },
-        { faixaCiclo: "31-60 dias", quantidade: 4 },
-        { faixaCiclo: "61-90 dias", quantidade: 2 },
-        { faixaCiclo: ">90 dias", quantidade: 1 },
-      ]);
+        setCycleSalesData([
+          { faixaCiclo: "0-7 dias", quantidade: 5 },
+          { faixaCiclo: "8-14 dias", quantidade: 12 },
+          { faixaCiclo: "15-30 dias", quantidade: 8 },
+          { faixaCiclo: "31-60 dias", quantidade: 4 },
+          { faixaCiclo: "61-90 dias", quantidade: 2 },
+          { faixaCiclo: ">90 dias", quantidade: 1 },
+        ]);
 
-      setLossReasonsData([
-        { motivoPerda: "Sem Budget", quantidade: 10, percentualAcumulado: 35 },
-        { motivoPerda: "Comprado do concorrente", quantidade: 8, percentualAcumulado: 65 },
-        { motivoPerda: "Não viu valor", quantidade: 5, percentualAcumulado: 85 },
-        { motivoPerda: "Timing errado", quantidade: 3, percentualAcumulado: 95 },
-        { motivoPerda: "Outros", quantidade: 2, percentualAcumulado: 100 },
-      ]);
+        setLossReasonsData([
+          { motivoPerda: "Sem Budget", quantidade: 10, percentualAcumulado: 35 },
+          { motivoPerda: "Comprado do concorrente", quantidade: 8, percentualAcumulado: 65 },
+          { motivoPerda: "Não viu valor", quantidade: 5, percentualAcumulado: 85 },
+          { motivoPerda: "Timing errado", quantidade: 3, percentualAcumulado: 95 },
+          { motivoPerda: "Outros", quantidade: 2, percentualAcumulado: 100 },
+        ]);
+      } catch (error) {
+        console.error("Error loading data:", error);
+      }
     };
 
     loadData();
@@ -187,7 +190,7 @@ const CloserPage: React.FC = () => {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <KpiCard 
           title="Ticket Médio" 
           value="R$ 5.625" 
