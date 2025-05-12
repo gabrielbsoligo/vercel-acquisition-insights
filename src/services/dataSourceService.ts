@@ -1,3 +1,4 @@
+
 import supabase from './supabaseService';
 import { Database } from '@/integrations/supabase/types';
 import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
@@ -71,8 +72,9 @@ const formatDateForQuery = (date: Date): string => {
   return date.toISOString().split('T')[0];
 };
 
-// Simplified approach using any for the specific query builder types
-export const fetchFilteredData = async <T extends SupabaseTableName>(
+// Use a workaround to avoid TypeScript's deep instantiation issue
+// by using type any for the intermediate query builder
+export const fetchFilteredData = async (
   internalTableName: string,
   dateRange: { from: Date, to: Date },
   additionalFilters?: Record<string, any>
@@ -80,8 +82,8 @@ export const fetchFilteredData = async <T extends SupabaseTableName>(
   try {
     const supabaseTableName = mapInternalToSupabaseTable(internalTableName);
     
-    // Start with a basic query without complex types
-    let query = supabase
+    // Start with a basic query
+    let query: any = supabase
       .from(supabaseTableName)
       .select('*');
     
@@ -130,7 +132,7 @@ export const fetchFilteredData = async <T extends SupabaseTableName>(
       });
     }
     
-    // Execute the query without specific type annotations that cause errors
+    // Execute the query
     const { data, error } = await query;
     
     if (error) {
