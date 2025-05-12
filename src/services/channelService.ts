@@ -1,3 +1,4 @@
+
 import { DateRange } from "react-day-picker";
 import { 
   fetchNegociacoesData,
@@ -88,7 +89,7 @@ export const fetchLeadBrokerPerformanceData = async (dateRange?: DateRange) => {
     
     // Calculate performance metrics
     const totalLeadsCost = leadBrokerData.reduce((sum: number, row: any) => 
-      sum + (Number(row['VALOR']) || 0), 0);
+      sum + (Number(row.VALOR) || 0), 0);
     
     const totalLeadsCount = leadBrokerData.length;
     
@@ -108,7 +109,7 @@ export const fetchLeadBrokerPerformanceData = async (dateRange?: DateRange) => {
     // Calculate ROI
     const totalRevenue = leadBrokerData.reduce((sum: number, row: any) => {
       if (row.STATUS === 'Convertido') {
-        return sum + (Number(row['VALOR']) || 0);
+        return sum + (Number(row.VALOR) || 0);
       }
       return sum;
     }, 0);

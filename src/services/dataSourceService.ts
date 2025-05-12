@@ -1,7 +1,5 @@
-
 import supabase from './supabaseService';
 import Papa from 'papaparse';
-import { type PostgrestQueryBuilder } from '@supabase/supabase-js';
 import { Database } from '@/integrations/supabase/types';
 
 export const parseDate = (dateString: string): Date => {
@@ -68,7 +66,7 @@ export const fetchFilteredData = async (
   try {
     const supabaseTableName = mapInternalToSupabaseTable(internalTableName);
     
-    // Start the query using type assertion for proper typing
+    // Start the query using correct typing
     let query = supabase.from(supabaseTableName).select('*');
     
     // Add date range filters if applicable
