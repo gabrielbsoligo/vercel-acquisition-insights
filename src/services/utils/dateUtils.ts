@@ -1,5 +1,4 @@
 import { DateRange } from "react-day-picker";
-import { parseDate, isDateInRange } from "../dataSourceService";
 
 // Helper function to ensure DateRange has proper values
 export const normalizeDateRange = (dateRange?: DateRange): { from: Date; to: Date } => {

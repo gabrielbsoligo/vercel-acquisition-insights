@@ -1,5 +1,5 @@
 
-// Re-export utility functions
+// Re-export utility functions from dateUtils directly
 export { parseDate, isDateInRange } from './utils/dateUtils';
 export { mapInternalToSupabaseTable, getDateColumnForTable } from './utils/tableMapping';
 

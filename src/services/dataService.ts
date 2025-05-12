@@ -8,4 +8,4 @@ export * from './utils/dateUtils';
 export * from './utils/tableMapping';
 export * from './metaService';
 export * from './negociacoesService';
-
+export * from './queryService';
