@@ -1,4 +1,3 @@
-
 import supabase from './supabaseService';
 import { Database } from '@/integrations/supabase/types';
 import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
@@ -72,25 +71,19 @@ const formatDateForQuery = (date: Date): string => {
   return date.toISOString().split('T')[0];
 };
 
-// Define a type that maps table names to their row types
-type TableRowTypeMap = {
-  [K in SupabaseTableName]: Database['public']['Tables'][K]['Row']
-};
-
-// Modified to use Supabase for data sources with server-side date filtering and explicit typing
+// Simplified approach using any for the specific query builder types
 export const fetchFilteredData = async <T extends SupabaseTableName>(
   internalTableName: string,
   dateRange: { from: Date, to: Date },
   additionalFilters?: Record<string, any>
-): Promise<TableRowTypeMap[T][]> => {
+): Promise<any[]> => {
   try {
-    const supabaseTableName = mapInternalToSupabaseTable(internalTableName) as T;
+    const supabaseTableName = mapInternalToSupabaseTable(internalTableName);
     
-    // Use explicit typing for the query with PostgrestFilterBuilder
-    let query: PostgrestFilterBuilder<Database['public']['Tables'][T], TableRowTypeMap[T], TableRowTypeMap[T]> = 
-      supabase
-        .from(supabaseTableName)
-        .select('*');
+    // Start with a basic query without complex types
+    let query = supabase
+      .from(supabaseTableName)
+      .select('*');
     
     // Add date range filters on the server side
     const dateColumn = getDateColumnForTable(supabaseTableName);
@@ -137,7 +130,7 @@ export const fetchFilteredData = async <T extends SupabaseTableName>(
       });
     }
     
-    // Execute the query with explicit typing of the result
+    // Execute the query without specific type annotations that cause errors
     const { data, error } = await query;
     
     if (error) {
@@ -156,7 +149,7 @@ export const fetchFilteredData = async <T extends SupabaseTableName>(
 export const fetchSdrMetaData = async () => {
   try {
     // Fetch from Meta Pre Venda table
-    const data = await fetchFilteredData<'Meta Pre Venda'>(
+    const data = await fetchFilteredData(
       'sdr_meta',
       { from: new Date(2020, 0, 1), to: new Date(2030, 11, 31) } // Wide date range to get all data
     );
@@ -171,7 +164,7 @@ export const fetchSdrMetaData = async () => {
 export const fetchCloserMetaData = async () => {
   try {
     // Fetch from Meta Closer table
-    const data = await fetchFilteredData<'Meta Closer'>(
+    const data = await fetchFilteredData(
       'closer_meta',
       { from: new Date(2020, 0, 1), to: new Date(2030, 11, 31) } // Wide date range to get all data
     );
@@ -187,7 +180,7 @@ export const fetchNegociacoesData = async (
   dateRange: { from: Date, to: Date }
 ) => {
   try {
-    const data = await fetchFilteredData<'Negociacoes'>('negociacoes', dateRange);
+    const data = await fetchFilteredData('negociacoes', dateRange);
     return data || [];
   } catch (error) {
     console.error('Error fetching negociacoes data:', error);
@@ -198,7 +191,7 @@ export const fetchNegociacoesData = async (
 export const fetchEmpresaMetaData = async () => {
   try {
     // Fetch from Meta Empresa table
-    const data = await fetchFilteredData<'Meta Empresa'>(
+    const data = await fetchFilteredData(
       'empresa_meta',
       { from: new Date(2020, 0, 1), to: new Date(2030, 11, 31) } // Wide date range to get all data
     );
