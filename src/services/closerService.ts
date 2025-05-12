@@ -50,7 +50,10 @@ export const fetchCloserKpiData = async (
       case 'vendas':
         // Sales are tracked in the Negociacoes table
         valorRealizado = negociacoesData.filter((row: any) => 
-          row.STATUS === 'Ganho' || row.STATUS === 'Finalizado'
+          row.STATUS === 'Ganho' || 
+          row.STATUS === 'Finalizado' || 
+          row.STATUS === 'Contrato Assinado' || 
+          row.STATUS === 'Contrato na Rua'
         ).length;
         break;
         
@@ -65,7 +68,10 @@ export const fetchCloserKpiData = async (
           
         // Sales from Negociacoes  
         const totalVendas = negociacoesData.filter((row: any) => 
-          row.STATUS === 'Ganho' || row.STATUS === 'Finalizado'
+          row.STATUS === 'Ganho' || 
+          row.STATUS === 'Finalizado' || 
+          row.STATUS === 'Contrato Assinado' || 
+          row.STATUS === 'Contrato na Rua'
         ).length;
           
         valorRealizado = totalReunioes > 0 ? (totalVendas / totalReunioes) * 100 : 0;
@@ -77,6 +83,46 @@ export const fetchCloserKpiData = async (
           sum + (row['Indicação Coletadas'] || 0), 0);
         break;
         
+      case 'valorVendido':
+        // Get sum of VALOR for won deals
+        valorRealizado = negociacoesData
+          .filter((row: any) => 
+            row.STATUS === 'Ganho' || 
+            row.STATUS === 'Finalizado' || 
+            row.STATUS === 'Contrato Assinado' || 
+            row.STATUS === 'Contrato na Rua'
+          )
+          .reduce((sum: number, row: any) => sum + (row.VALOR || 0), 0);
+        break;
+        
+      case 'ticketMedio': {
+        // Calculate average ticket for won deals
+        const vendasGanhas = negociacoesData.filter((row: any) => 
+          row.STATUS === 'Ganho' || 
+          row.STATUS === 'Finalizado' || 
+          row.STATUS === 'Contrato Assinado' || 
+          row.STATUS === 'Contrato na Rua'
+        );
+        const totalVendido = vendasGanhas.reduce((sum: number, row: any) => sum + (row.VALOR || 0), 0);
+        valorRealizado = vendasGanhas.length > 0 ? totalVendido / vendasGanhas.length : 0;
+        break;
+      }
+      
+      case 'cicloVendas': {
+        // Calculate average sales cycle for won deals
+        const vendasFinalizadas = negociacoesData.filter((row: any) => 
+          (row.STATUS === 'Ganho' || 
+          row.STATUS === 'Finalizado' || 
+          row.STATUS === 'Contrato Assinado' || 
+          row.STATUS === 'Contrato na Rua') && 
+          row['CURVA DIAS'] !== null && 
+          row['CURVA DIAS'] !== undefined
+        );
+        const totalDiasCiclo = vendasFinalizadas.reduce((sum: number, row: any) => sum + (row['CURVA DIAS'] || 0), 0);
+        valorRealizado = vendasFinalizadas.length > 0 ? totalDiasCiclo / vendasFinalizadas.length : 0;
+        break;
+      }
+      
       default:
         valorRealizado = 0;
     }
@@ -91,7 +137,10 @@ export const fetchCloserKpiData = async (
       'reunioesRealizadas': 'Número de negócios iniciados',
       'vendas': 'Vendas',
       'taxaConversao': 'Conversão',
-      'indicacoesColetadas': 'Indicações'
+      'indicacoesColetadas': 'Indicações',
+      'valorVendido': 'Receita',
+      'ticketMedio': 'TKM',
+      'cicloVendas': 'Curva Fechamento'
     };
     
     const metaType = metaTypeMapping[kpiType];
@@ -135,7 +184,8 @@ export const fetchCloserKpiData = async (
 // Fetch closer performance data for charts
 export const fetchCloserPerformanceData = async (
   dateRange?: DateRange, 
-  selectedCloser?: string
+  selectedCloser?: string,
+  selectedOrigin?: string
 ) => {
   try {
     const normalizedDateRange = normalizeDateRange(dateRange);
@@ -148,11 +198,16 @@ export const fetchCloserPerformanceData = async (
     );
     
     // Fetch Negociacoes data for sales
-    const negociacoesData = await fetchFilteredData(
+    let negociacoesData = await fetchFilteredData(
       'negociacoes', 
       normalizedDateRange,
       selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined
     );
+    
+    // Apply origin filter if selected
+    if (selectedOrigin && selectedOrigin !== 'all') {
+      negociacoesData = negociacoesData.filter((row: any) => row.ORIGEM === selectedOrigin);
+    }
     
     // Get unique closers from both datasets
     const closersFromPerformance = Array.from(new Set(closerPerformanceData.map((row: any) => row.Closer))).filter(Boolean);
@@ -181,7 +236,14 @@ export const fetchCloserPerformanceData = async (
       // Sales data from negociacoesData
       const closerNegociations = negociacoesData.filter((row: any) => row.CLOSER === closer);
       const vendas = closerNegociations.filter((row: any) => 
-        row.STATUS === 'Ganho' || row.STATUS === 'Finalizado'
+        row.STATUS === 'Ganho' || 
+        row.STATUS === 'Finalizado' || 
+        row.STATUS === 'Contrato Assinado' || 
+        row.STATUS === 'Contrato na Rua'
+      ).length;
+      
+      const negociosPerdidos = closerNegociations.filter((row: any) => 
+        row.STATUS === 'Perdido'
       ).length;
         
       const taxaConversao = reunioesRealizadas > 0 
@@ -191,34 +253,255 @@ export const fetchCloserPerformanceData = async (
       const indicacoesColetadas = closerData.reduce((sum: number, row: any) => 
         sum + (row['Indicação Coletadas'] || 0), 0);
       
+      // Calculate total value sold
+      const valorVendido = closerNegociations
+        .filter((row: any) => 
+          row.STATUS === 'Ganho' || 
+          row.STATUS === 'Finalizado' || 
+          row.STATUS === 'Contrato Assinado' || 
+          row.STATUS === 'Contrato na Rua'
+        )
+        .reduce((sum: number, row: any) => sum + (row.VALOR || 0), 0);
+      
+      // Calculate ticket average
+      const ticketMedio = vendas > 0 ? valorVendido / vendas : 0;
+      
+      // Calculate sales cycle average
+      const negociosFinalizados = closerNegociations.filter((row: any) => 
+        ((row.STATUS === 'Ganho' || 
+        row.STATUS === 'Finalizado' || 
+        row.STATUS === 'Contrato Assinado' || 
+        row.STATUS === 'Contrato na Rua') || 
+        row.STATUS === 'Perdido') && 
+        row['CURVA DIAS'] !== null && 
+        row['CURVA DIAS'] !== undefined
+      );
+      
+      const totalDiasCiclo = negociosFinalizados.reduce((sum: number, row: any) => sum + (row['CURVA DIAS'] || 0), 0);
+      const cicloMedio = negociosFinalizados.length > 0 ? totalDiasCiclo / negociosFinalizados.length : 0;
+      
       return {
         closerName: closer,
         reunioesRealizadas,
         vendas,
+        negociosPerdidos,
         taxaConversao,
-        indicacoesColetadas
+        indicacoesColetadas,
+        valorVendido,
+        ticketMedio,
+        cicloMedio
       };
     });
     
     // Add total for all closers
     const totalReunioesRealizadas = closerPerformance.reduce((sum, closer) => sum + closer.reunioesRealizadas, 0);
     const totalVendas = closerPerformance.reduce((sum, closer) => sum + closer.vendas, 0);
+    const totalNegociosPerdidos = closerPerformance.reduce((sum, closer) => sum + closer.negociosPerdidos, 0);
     const totalTaxaConversao = totalReunioesRealizadas > 0 
       ? (totalVendas / totalReunioesRealizadas) * 100 
       : 0;
     const totalIndicacoesColetadas = closerPerformance.reduce((sum, closer) => sum + closer.indicacoesColetadas, 0);
+    const totalValorVendido = closerPerformance.reduce((sum, closer) => sum + closer.valorVendido, 0);
+    const totalTicketMedio = totalVendas > 0 ? totalValorVendido / totalVendas : 0;
+    
+    // For cycle average, calculate weighted average
+    const totalCicloMedio = closerPerformance.reduce((sum, closer) => {
+      // Only include closers with finalized deals
+      if ((closer.vendas + closer.negociosPerdidos) > 0) {
+        return sum + (closer.cicloMedio * (closer.vendas + closer.negociosPerdidos));
+      }
+      return sum;
+    }, 0) / (totalVendas + totalNegociosPerdidos) || 0;
     
     closerPerformance.push({
       closerName: 'Total Equipe',
       reunioesRealizadas: totalReunioesRealizadas,
       vendas: totalVendas,
+      negociosPerdidos: totalNegociosPerdidos,
       taxaConversao: totalTaxaConversao,
-      indicacoesColetadas: totalIndicacoesColetadas
+      indicacoesColetadas: totalIndicacoesColetadas,
+      valorVendido: totalValorVendido,
+      ticketMedio: totalTicketMedio,
+      cicloMedio: totalCicloMedio
     });
     
     return closerPerformance;
   } catch (error) {
     console.error('Error fetching closer performance data:', error);
+    return [];
+  }
+};
+
+// New function for sales funnel data
+export const fetchCloserSalesFunnelData = async (
+  dateRange?: DateRange,
+  selectedCloser?: string,
+  selectedOrigin?: string
+) => {
+  try {
+    const normalizedDateRange = normalizeDateRange(dateRange);
+    
+    // Fetch Negociacoes data with filters
+    let negociacoesData = await fetchFilteredData(
+      'negociacoes', 
+      normalizedDateRange,
+      selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined
+    );
+    
+    // Apply origin filter if selected
+    if (selectedOrigin && selectedOrigin !== 'all') {
+      negociacoesData = negociacoesData.filter((row: any) => row.ORIGEM === selectedOrigin);
+    }
+    
+    // Count by funnel stage
+    const iniciados = negociacoesData.length;
+    const emNegociacao = negociacoesData.filter((row: any) => 
+      row.STATUS === 'Negociação' || row.STATUS === 'Follow Longo').length;
+    
+    const ganhos = negociacoesData.filter((row: any) => 
+      row.STATUS === 'Ganho' || 
+      row.STATUS === 'Finalizado' || 
+      row.STATUS === 'Contrato Assinado' || 
+      row.STATUS === 'Contrato na Rua'
+    ).length;
+    
+    const perdidos = negociacoesData.filter((row: any) => row.STATUS === 'Perdido').length;
+    
+    // Create funnel data array
+    return [
+      { etapa: 'Oportunidades Iniciadas', valor: iniciados },
+      { etapa: 'Em Negociação', valor: emNegociacao },
+      { etapa: 'Ganhos', valor: ganhos },
+      { etapa: 'Perdidos', valor: perdidos }
+    ];
+  } catch (error) {
+    console.error('Error fetching sales funnel data:', error);
+    return [];
+  }
+};
+
+// New function for loss reasons data
+export const fetchCloserLossReasonsData = async (
+  dateRange?: DateRange,
+  selectedCloser?: string,
+  selectedOrigin?: string
+) => {
+  try {
+    const normalizedDateRange = normalizeDateRange(dateRange);
+    
+    // Fetch Negociacoes data with filters
+    let negociacoesData = await fetchFilteredData(
+      'negociacoes', 
+      normalizedDateRange,
+      selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined
+    );
+    
+    // Apply origin filter if selected
+    if (selectedOrigin && selectedOrigin !== 'all') {
+      negociacoesData = negociacoesData.filter((row: any) => row.ORIGEM === selectedOrigin);
+    }
+    
+    // Filter only lost deals
+    const perdidos = negociacoesData.filter((row: any) => row.STATUS === 'Perdido');
+    
+    // Group by loss reason
+    const motivosCount: Record<string, number> = {};
+    
+    perdidos.forEach((row: any) => {
+      const motivo = row['MOTIVOS DE PERDA'] || 'Não informado';
+      motivosCount[motivo] = (motivosCount[motivo] || 0) + 1;
+    });
+    
+    // Convert to array and sort by frequency
+    const motivosArray = Object.entries(motivosCount)
+      .map(([motivoPerda, quantidade]) => ({ motivoPerda, quantidade }))
+      .sort((a, b) => b.quantidade - a.quantidade);
+    
+    // Calculate cumulative percentages
+    const total = motivosArray.reduce((sum, item) => sum + item.quantidade, 0);
+    let acumulado = 0;
+    
+    return motivosArray.map(item => {
+      acumulado += total > 0 ? (item.quantidade / total) * 100 : 0;
+      return {
+        motivoPerda: item.motivoPerda,
+        quantidade: item.quantidade,
+        percentualAcumulado: Math.round(acumulado)
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching loss reasons data:', error);
+    return [];
+  }
+};
+
+// New function for sales cycle data
+export const fetchCloserSalesCycleData = async (
+  dateRange?: DateRange,
+  selectedCloser?: string,
+  selectedOrigin?: string
+) => {
+  try {
+    const normalizedDateRange = normalizeDateRange(dateRange);
+    
+    // Fetch Negociacoes data with filters
+    let negociacoesData = await fetchFilteredData(
+      'negociacoes', 
+      normalizedDateRange,
+      selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined
+    );
+    
+    // Apply origin filter if selected
+    if (selectedOrigin && selectedOrigin !== 'all') {
+      negociacoesData = negociacoesData.filter((row: any) => row.ORIGEM === selectedOrigin);
+    }
+    
+    // Define cycle ranges
+    const faixas = {
+      '0-7 dias': 0,
+      '8-14 dias': 0,
+      '15-30 dias': 0,
+      '31-60 dias': 0,
+      '61-90 dias': 0,
+      '>90 dias': 0
+    };
+    
+    // Filter only finalized deals with cycle defined
+    const negociosFinalizados = negociacoesData.filter((row: any) => 
+      ((row.STATUS === 'Ganho' || 
+       row.STATUS === 'Finalizado' || 
+       row.STATUS === 'Contrato Assinado' || 
+       row.STATUS === 'Contrato na Rua') || 
+       row.STATUS === 'Perdido') && 
+      row['CURVA DIAS'] !== null && 
+      row['CURVA DIAS'] !== undefined
+    );
+    
+    // Classify by cycle range
+    negociosFinalizados.forEach((row: any) => {
+      const ciclo = row['CURVA DIAS'];
+      if (ciclo <= 7) {
+        faixas['0-7 dias']++;
+      } else if (ciclo <= 14) {
+        faixas['8-14 dias']++;
+      } else if (ciclo <= 30) {
+        faixas['15-30 dias']++;
+      } else if (ciclo <= 60) {
+        faixas['31-60 dias']++;
+      } else if (ciclo <= 90) {
+        faixas['61-90 dias']++;
+      } else {
+        faixas['>90 dias']++;
+      }
+    });
+    
+    // Convert to array
+    return Object.entries(faixas).map(([faixaCiclo, quantidade]) => ({
+      faixaCiclo,
+      quantidade
+    }));
+  } catch (error) {
+    console.error('Error fetching sales cycle data:', error);
     return [];
   }
 };
