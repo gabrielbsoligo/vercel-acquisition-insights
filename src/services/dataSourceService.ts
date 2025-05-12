@@ -1,6 +1,7 @@
 
 import supabase from './supabaseService';
 import { Database } from '@/integrations/supabase/types';
+import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 import Papa from 'papaparse';
 
 export const parseDate = (dateString: string): Date => {
@@ -71,19 +72,25 @@ const formatDateForQuery = (date: Date): string => {
   return date.toISOString().split('T')[0];
 };
 
-// Modified to use Supabase for data sources with server-side date filtering
-export const fetchFilteredData = async (
+// Define a type that maps table names to their row types
+type TableRowTypeMap = {
+  [K in SupabaseTableName]: Database['public']['Tables'][K]['Row']
+};
+
+// Modified to use Supabase for data sources with server-side date filtering and explicit typing
+export const fetchFilteredData = async <T extends SupabaseTableName>(
   internalTableName: string,
   dateRange: { from: Date, to: Date },
   additionalFilters?: Record<string, any>
-) => {
+): Promise<TableRowTypeMap[T][]> => {
   try {
-    const supabaseTableName = mapInternalToSupabaseTable(internalTableName);
+    const supabaseTableName = mapInternalToSupabaseTable(internalTableName) as T;
     
-    // Use explicit typing for the query to avoid excessive type instantiation
-    let query = supabase
-      .from(supabaseTableName)
-      .select('*');
+    // Use explicit typing for the query with PostgrestFilterBuilder
+    let query: PostgrestFilterBuilder<Database['public']['Tables'][T], TableRowTypeMap[T], TableRowTypeMap[T]> = 
+      supabase
+        .from(supabaseTableName)
+        .select('*');
     
     // Add date range filters on the server side
     const dateColumn = getDateColumnForTable(supabaseTableName);
@@ -149,7 +156,7 @@ export const fetchFilteredData = async (
 export const fetchSdrMetaData = async () => {
   try {
     // Fetch from Meta Pre Venda table
-    const data = await fetchFilteredData(
+    const data = await fetchFilteredData<'Meta Pre Venda'>(
       'sdr_meta',
       { from: new Date(2020, 0, 1), to: new Date(2030, 11, 31) } // Wide date range to get all data
     );
@@ -164,7 +171,7 @@ export const fetchSdrMetaData = async () => {
 export const fetchCloserMetaData = async () => {
   try {
     // Fetch from Meta Closer table
-    const data = await fetchFilteredData(
+    const data = await fetchFilteredData<'Meta Closer'>(
       'closer_meta',
       { from: new Date(2020, 0, 1), to: new Date(2030, 11, 31) } // Wide date range to get all data
     );
@@ -180,7 +187,7 @@ export const fetchNegociacoesData = async (
   dateRange: { from: Date, to: Date }
 ) => {
   try {
-    const data = await fetchFilteredData('negociacoes', dateRange);
+    const data = await fetchFilteredData<'Negociacoes'>('negociacoes', dateRange);
     return data || [];
   } catch (error) {
     console.error('Error fetching negociacoes data:', error);
@@ -191,7 +198,7 @@ export const fetchNegociacoesData = async (
 export const fetchEmpresaMetaData = async () => {
   try {
     // Fetch from Meta Empresa table
-    const data = await fetchFilteredData(
+    const data = await fetchFilteredData<'Meta Empresa'>(
       'empresa_meta',
       { from: new Date(2020, 0, 1), to: new Date(2030, 11, 31) } // Wide date range to get all data
     );
