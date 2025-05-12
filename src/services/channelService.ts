@@ -21,7 +21,7 @@ export const fetchChannelsData = async (dateRange?: DateRange) => {
     const negociacoesData = await fetchFilteredData('negociacoes', normalizedDateRange);
     
     // Get empresa_meta data for meta values
-    const empresaMetaData = await fetchEmpresaMetaData();
+    const empresaMetaData = await fetchEmpresaMetaData() as MetaEmpresa[];
     
     // Dynamically get unique channels from the ORIGEM column
     const channels = Array.from(new Set(negociacoesData
@@ -52,7 +52,8 @@ export const fetchChannelsData = async (dateRange?: DateRange) => {
       const fromMonth = normalizedDateRange.from.getMonth() + 1;
       const fromYear = normalizedDateRange.from.getFullYear();
       
-      const channelMeta = empresaMetaData.filter((row) => {
+      // Type assertion to ensure empresaMetaData rows are correctly typed
+      const channelMeta = empresaMetaData.filter((row: MetaEmpresa) => {
         if (!row.Mês) return false;
         
         const rowDate = parseDate(row.Mês);
@@ -62,18 +63,18 @@ export const fetchChannelsData = async (dateRange?: DateRange) => {
         return rowMonth === fromMonth && 
                rowYear === fromYear && 
                row.Canal === channel;
-      }) as MetaEmpresa[];
+      });
       
       // Access values with proper type handling for Meta Empresa rows
       let mrrMeta = 0;
       let oneTimeMeta = 0;
       
-      const mrrMetaRow = channelMeta.find((row) => row.Tipo === 'MRR');
+      const mrrMetaRow = channelMeta.find((row: MetaEmpresa) => row.Tipo === 'MRR');
       if (mrrMetaRow && mrrMetaRow.Valor !== null) {
         mrrMeta = mrrMetaRow.Valor;
       }
       
-      const oneTimeMetaRow = channelMeta.find((row) => row.Tipo === 'One Time');
+      const oneTimeMetaRow = channelMeta.find((row: MetaEmpresa) => row.Tipo === 'One Time');
       if (oneTimeMetaRow && oneTimeMetaRow.Valor !== null) {
         oneTimeMeta = oneTimeMetaRow.Valor;
       }

@@ -41,7 +41,12 @@ const mapInternalToSupabaseTable = (internalName: string): SupabaseTableName => 
     'outbound': 'Outbound'
   };
   
-  return tableMapping[internalName] || 'Negociacoes';
+  const mappedTable = tableMapping[internalName];
+  if (!mappedTable) {
+    throw new Error(`Unknown table name: ${internalName}`);
+  }
+  
+  return mappedTable;
 };
 
 // Map internal table names to appropriate date column for filtering
@@ -75,8 +80,10 @@ export const fetchFilteredData = async (
   try {
     const supabaseTableName = mapInternalToSupabaseTable(internalTableName);
     
-    // Start the query
-    let query = supabase.from(supabaseTableName).select('*');
+    // Use explicit typing for the query to avoid excessive type instantiation
+    let query = supabase
+      .from(supabaseTableName)
+      .select('*');
     
     // Add date range filters on the server side
     const dateColumn = getDateColumnForTable(supabaseTableName);
@@ -123,6 +130,7 @@ export const fetchFilteredData = async (
       });
     }
     
+    // Execute the query with explicit typing of the result
     const { data, error } = await query;
     
     if (error) {

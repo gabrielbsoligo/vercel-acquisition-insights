@@ -11,9 +11,10 @@ import { Database } from '@/integrations/supabase/types';
 
 // Type definition for SDR Meta table
 type SdrMeta = Database['public']['Tables']['Meta Pre Venda']['Row'];
+type SdrPerformance = Database['public']['Tables']['Controle Pre Venda']['Row'];
 
 // Helper function to parse time string (hh:mm:ss) to seconds
-const parseTimeStringToSeconds = (timeStr: string | null): number => {
+const parseTimeStringToSeconds = (timeStr: string): number => {
   if (!timeStr) return 0;
   
   const timeParts = timeStr.trim().split(':');
@@ -67,38 +68,37 @@ export const fetchSdrKpiData = async (
       'sdr_performance', 
       normalizedDateRange,
       selectedSdr && selectedSdr !== 'all' ? { SDR: selectedSdr } : undefined
-    );
+    ) as SdrPerformance[];
     
-    const sdrMetaData = await fetchSdrMetaData();
+    const sdrMetaData = await fetchSdrMetaData() as SdrMeta[];
 
     // Calculate based on KPI type
     let valorRealizado = 0;
     
     switch (kpiType) {
       case 'leadsAtivados':
-        valorRealizado = sdrPerformanceData.reduce((sum: number, row: any) => 
+        valorRealizado = sdrPerformanceData.reduce((sum: number, row: SdrPerformance) => 
           sum + (row['Empresas Ativadas'] || 0), 0);
         break;
         
       case 'ligacoesFeitas':
-        valorRealizado = sdrPerformanceData.reduce((sum: number, row: any) => 
+        valorRealizado = sdrPerformanceData.reduce((sum: number, row: SdrPerformance) => 
           sum + (row['Ligações Realizadas'] || 0), 0);
         break;
         
       case 'ligacoesAtendidas':
-        valorRealizado = sdrPerformanceData.reduce((sum: number, row: any) => 
+        valorRealizado = sdrPerformanceData.reduce((sum: number, row: SdrPerformance) => 
           sum + (row['Ligações Atendidas'] || 0), 0);
         break;
         
       case 'tempoLinha':
-        // Parse time strings to seconds for summation
-        valorRealizado = sdrPerformanceData.reduce((sum: number, row: any) => {
-          return sum + parseTimeStringToSeconds(row.Tempo);
-        }, 0);
+        // Now Tempo is a number representing total seconds
+        valorRealizado = sdrPerformanceData.reduce((sum: number, row: SdrPerformance) => 
+          sum + (row.Tempo || 0), 0);
         break;
         
       case 'reunioesAgendadas':
-        valorRealizado = sdrPerformanceData.reduce((sum: number, row: any) => 
+        valorRealizado = sdrPerformanceData.reduce((sum: number, row: SdrPerformance) => 
           sum + 
           (row['Marcadas Out'] || 0) + 
           (row['Marcadas Recom'] || 0) + 
@@ -106,7 +106,7 @@ export const fetchSdrKpiData = async (
         break;
         
       case 'reunioesAcontecidas':
-        valorRealizado = sdrPerformanceData.reduce((sum: number, row: any) => 
+        valorRealizado = sdrPerformanceData.reduce((sum: number, row: SdrPerformance) => 
           sum + 
           (row['Show Out'] || 0) + 
           (row['Show Recom'] || 0) + 
@@ -114,10 +114,10 @@ export const fetchSdrKpiData = async (
         break;
         
       case 'taxaLeadsConexoes': {
-        const totalLeads = sdrPerformanceData.reduce((sum: number, row: any) => 
+        const totalLeads = sdrPerformanceData.reduce((sum: number, row: SdrPerformance) => 
           sum + (row['Empresas Ativadas'] || 0), 0);
           
-        const totalConexoes = sdrPerformanceData.reduce((sum: number, row: any) => 
+        const totalConexoes = sdrPerformanceData.reduce((sum: number, row: SdrPerformance) => 
           sum + (row['Novas Conexões Stakeholder'] || 0), 0);
           
         valorRealizado = totalLeads > 0 ? (totalConexoes / totalLeads) * 100 : 0;
@@ -125,10 +125,10 @@ export const fetchSdrKpiData = async (
       }
       
       case 'taxaConexoesAgendadas': {
-        const totalConexoes = sdrPerformanceData.reduce((sum: number, row: any) => 
+        const totalConexoes = sdrPerformanceData.reduce((sum: number, row: SdrPerformance) => 
           sum + (row['Novas Conexões Stakeholder'] || 0), 0);
           
-        const totalAgendadas = sdrPerformanceData.reduce((sum: number, row: any) => 
+        const totalAgendadas = sdrPerformanceData.reduce((sum: number, row: SdrPerformance) => 
           sum + 
           (row['Marcadas Out'] || 0) + 
           (row['Marcadas Recom'] || 0) + 
@@ -139,13 +139,13 @@ export const fetchSdrKpiData = async (
       }
       
       case 'taxaAgendasAcontecidas': {
-        const totalAgendadas = sdrPerformanceData.reduce((sum: number, row: any) => 
+        const totalAgendadas = sdrPerformanceData.reduce((sum: number, row: SdrPerformance) => 
           sum + 
           (row['Marcadas Out'] || 0) + 
           (row['Marcadas Recom'] || 0) + 
           (row['Marcadas Inbound'] || 0), 0);
           
-        const totalAcontecidas = sdrPerformanceData.reduce((sum: number, row: any) => 
+        const totalAcontecidas = sdrPerformanceData.reduce((sum: number, row: SdrPerformance) => 
           sum + 
           (row['Show Out'] || 0) + 
           (row['Show Recom'] || 0) + 
@@ -222,9 +222,9 @@ export const fetchSdrKpiData = async (
       const formattedMeta = formatSecondsToTimeString(meta);
       
       return {
-        valorRealizado: valorRealizado, // Return raw seconds for calculations
+        valorRealizado, // Return raw seconds for calculations
         valorRealizadoFormatted: formattedValorRealizado, // For display
-        meta: meta, // Return raw seconds for calculations
+        meta, // Return raw seconds for calculations
         metaFormatted: formattedMeta, // For display
         percentComplete
       } as TimeKpiResult;
