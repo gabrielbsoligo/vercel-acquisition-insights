@@ -1,5 +1,8 @@
+
 import supabase from './supabaseService';
 import Papa from 'papaparse';
+import { type PostgrestQueryBuilder } from '@supabase/supabase-js';
+import { Database } from '@/integrations/supabase/types';
 
 export const parseDate = (dateString: string): Date => {
   // Support for both DD/MM/YYYY and YYYY-MM-DD formats
@@ -22,9 +25,12 @@ export const isDateInRange = (date: Date, from: Date, to: Date): boolean => {
   return date >= from && date <= to;
 };
 
+// Type for valid Supabase tables
+type SupabaseTableName = keyof Database['public']['Tables'];
+
 // Map internal table names to Supabase table names
-const mapInternalToSupabaseTable = (internalName: string): string => {
-  const tableMapping: Record<string, string> = {
+const mapInternalToSupabaseTable = (internalName: string): SupabaseTableName => {
+  const tableMapping: Record<string, SupabaseTableName> = {
     'sdr_meta': 'Meta Pre Venda',
     'closer_meta': 'Meta Closer',
     'empresa_meta': 'Meta Empresa',
@@ -32,10 +38,11 @@ const mapInternalToSupabaseTable = (internalName: string): string => {
     'closer_performance': 'Controle Closer',
     'negociacoes': 'Negociacoes',
     'recomendacao': 'Recomendacao',
-    'leadbroker': 'Leadbroker'
-  };
+    'leadbroker': 'Leadbroker',
+    'outbound': 'Outbound'
+  } as Record<string, SupabaseTableName>;
   
-  return tableMapping[internalName] || internalName;
+  return tableMapping[internalName] || 'Negociacoes';
 };
 
 // Map internal table names to appropriate date column for filtering
@@ -61,7 +68,7 @@ export const fetchFilteredData = async (
   try {
     const supabaseTableName = mapInternalToSupabaseTable(internalTableName);
     
-    // Start the query
+    // Start the query using type assertion for proper typing
     let query = supabase.from(supabaseTableName).select('*');
     
     // Add date range filters if applicable

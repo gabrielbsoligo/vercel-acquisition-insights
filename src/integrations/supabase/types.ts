@@ -14,115 +14,115 @@ export type Database = {
           Closer: string | null
           Data: string | null
           ID: number
-          "Indicação Coletadas": string | null
-          "No Show Indicação": string | null
-          "No Show Outros": string | null
-          "NoShow Inbound": string | null
-          "NoShow Outbound": string | null
-          "Show Inbound": string | null
-          "Show Indicação": string | null
-          "Show Outbound": string | null
-          "Show Outros": string | null
-          "Vendas Inbound": string | null
-          "Vendas indicação": string | null
-          "Vendas Outbound": string | null
-          "Vendas Outros": string | null
+          "Indicação Coletadas": number | null
+          "No Show Indicação": number | null
+          "No Show Outros": number | null
+          "NoShow Inbound": number | null
+          "NoShow Outbound": number | null
+          "Show Inbound": number | null
+          "Show Indicação": number | null
+          "Show Outbound": number | null
+          "Show Outros": number | null
+          "Vendas Inbound": number | null
+          "Vendas indicação": number | null
+          "Vendas Outbound": number | null
+          "Vendas Outros": number | null
         }
         Insert: {
           Closer?: string | null
           Data?: string | null
           ID: number
-          "Indicação Coletadas"?: string | null
-          "No Show Indicação"?: string | null
-          "No Show Outros"?: string | null
-          "NoShow Inbound"?: string | null
-          "NoShow Outbound"?: string | null
-          "Show Inbound"?: string | null
-          "Show Indicação"?: string | null
-          "Show Outbound"?: string | null
-          "Show Outros"?: string | null
-          "Vendas Inbound"?: string | null
-          "Vendas indicação"?: string | null
-          "Vendas Outbound"?: string | null
-          "Vendas Outros"?: string | null
+          "Indicação Coletadas"?: number | null
+          "No Show Indicação"?: number | null
+          "No Show Outros"?: number | null
+          "NoShow Inbound"?: number | null
+          "NoShow Outbound"?: number | null
+          "Show Inbound"?: number | null
+          "Show Indicação"?: number | null
+          "Show Outbound"?: number | null
+          "Show Outros"?: number | null
+          "Vendas Inbound"?: number | null
+          "Vendas indicação"?: number | null
+          "Vendas Outbound"?: number | null
+          "Vendas Outros"?: number | null
         }
         Update: {
           Closer?: string | null
           Data?: string | null
           ID?: number
-          "Indicação Coletadas"?: string | null
-          "No Show Indicação"?: string | null
-          "No Show Outros"?: string | null
-          "NoShow Inbound"?: string | null
-          "NoShow Outbound"?: string | null
-          "Show Inbound"?: string | null
-          "Show Indicação"?: string | null
-          "Show Outbound"?: string | null
-          "Show Outros"?: string | null
-          "Vendas Inbound"?: string | null
-          "Vendas indicação"?: string | null
-          "Vendas Outbound"?: string | null
-          "Vendas Outros"?: string | null
+          "Indicação Coletadas"?: number | null
+          "No Show Indicação"?: number | null
+          "No Show Outros"?: number | null
+          "NoShow Inbound"?: number | null
+          "NoShow Outbound"?: number | null
+          "Show Inbound"?: number | null
+          "Show Indicação"?: number | null
+          "Show Outbound"?: number | null
+          "Show Outros"?: number | null
+          "Vendas Inbound"?: number | null
+          "Vendas indicação"?: number | null
+          "Vendas Outbound"?: number | null
+          "Vendas Outros"?: number | null
         }
         Relationships: []
       }
       "Controle Pre Venda": {
         Row: {
           Data: string | null
-          "Empresas Ativadas": string | null
+          "Empresas Ativadas": number | null
           ID: number
-          "Ligações Atendidas": string | null
-          "Ligações Realizadas": string | null
-          "Marcadas Inbound": string | null
-          "Marcadas Out": string | null
-          "Marcadas Recom": string | null
-          Noshow: string | null
-          "Novas Conexões Stakeholder": string | null
-          "Recomendações Coletadas": string | null
-          Remarcadas: string | null
+          "Ligações Atendidas": number | null
+          "Ligações Realizadas": number | null
+          "Marcadas Inbound": number | null
+          "Marcadas Out": number | null
+          "Marcadas Recom": number | null
+          Noshow: number | null
+          "Novas Conexões Stakeholder": number | null
+          "Recomendações Coletadas": number | null
+          Remarcadas: number | null
           SDR: string | null
-          "Show Inbound": string | null
-          "Show Out": string | null
-          "Show Recom": string | null
-          Tempo: string | null
+          "Show Inbound": number | null
+          "Show Out": number | null
+          "Show Recom": number | null
+          Tempo: unknown | null
         }
         Insert: {
           Data?: string | null
-          "Empresas Ativadas"?: string | null
+          "Empresas Ativadas"?: number | null
           ID: number
-          "Ligações Atendidas"?: string | null
-          "Ligações Realizadas"?: string | null
-          "Marcadas Inbound"?: string | null
-          "Marcadas Out"?: string | null
-          "Marcadas Recom"?: string | null
-          Noshow?: string | null
-          "Novas Conexões Stakeholder"?: string | null
-          "Recomendações Coletadas"?: string | null
-          Remarcadas?: string | null
+          "Ligações Atendidas"?: number | null
+          "Ligações Realizadas"?: number | null
+          "Marcadas Inbound"?: number | null
+          "Marcadas Out"?: number | null
+          "Marcadas Recom"?: number | null
+          Noshow?: number | null
+          "Novas Conexões Stakeholder"?: number | null
+          "Recomendações Coletadas"?: number | null
+          Remarcadas?: number | null
           SDR?: string | null
-          "Show Inbound"?: string | null
-          "Show Out"?: string | null
-          "Show Recom"?: string | null
-          Tempo?: string | null
+          "Show Inbound"?: number | null
+          "Show Out"?: number | null
+          "Show Recom"?: number | null
+          Tempo?: unknown | null
         }
         Update: {
           Data?: string | null
-          "Empresas Ativadas"?: string | null
+          "Empresas Ativadas"?: number | null
           ID?: number
-          "Ligações Atendidas"?: string | null
-          "Ligações Realizadas"?: string | null
-          "Marcadas Inbound"?: string | null
-          "Marcadas Out"?: string | null
-          "Marcadas Recom"?: string | null
-          Noshow?: string | null
-          "Novas Conexões Stakeholder"?: string | null
-          "Recomendações Coletadas"?: string | null
-          Remarcadas?: string | null
+          "Ligações Atendidas"?: number | null
+          "Ligações Realizadas"?: number | null
+          "Marcadas Inbound"?: number | null
+          "Marcadas Out"?: number | null
+          "Marcadas Recom"?: number | null
+          Noshow?: number | null
+          "Novas Conexões Stakeholder"?: number | null
+          "Recomendações Coletadas"?: number | null
+          Remarcadas?: number | null
           SDR?: string | null
-          "Show Inbound"?: string | null
-          "Show Out"?: string | null
-          "Show Recom"?: string | null
-          Tempo?: string | null
+          "Show Inbound"?: number | null
+          "Show Out"?: number | null
+          "Show Recom"?: number | null
+          Tempo?: unknown | null
         }
         Relationships: []
       }
@@ -140,7 +140,7 @@ export type Database = {
           SDR: string | null
           STATUS: string | null
           TELEFONE: string | null
-          VALOR: string | null
+          VALOR: number | null
         }
         Insert: {
           CANAL?: string | null
@@ -155,7 +155,7 @@ export type Database = {
           SDR?: string | null
           STATUS?: string | null
           TELEFONE?: string | null
-          VALOR?: string | null
+          VALOR?: number | null
         }
         Update: {
           CANAL?: string | null
@@ -170,7 +170,7 @@ export type Database = {
           SDR?: string | null
           STATUS?: string | null
           TELEFONE?: string | null
-          VALOR?: string | null
+          VALOR?: number | null
         }
         Relationships: []
       }
@@ -251,96 +251,63 @@ export type Database = {
           BANT: number | null
           CLOSER: string | null
           CNPJ: string | null
-          "CONEXÃO STAKE": string | null
           "CURVA DIAS": string | null
           "DATA 1º PGTO": string | null
-          "DATA AGENDAMENTO": string | null
           "DATA DA CALL": string | null
-          "DATA DA REUNIÃO": string | null
           "DATA DO FEC.": string | null
           "DATA RETOMADA": string | null
-          DEADLINE: string | null
           EMPRRESA: string | null
           ID: number
           "LINK CONTRATO": string | null
-          "MÊS COMPRA": string | null
-          "MÊS REUNIÃO": string | null
-          "MÊS VENDA": string | null
           "MOTIVOS DE PERDA": string | null
           OBSERVAÇÕES: string | null
           ORIGEM: string | null
           PRODUTO: string | null
-          "REUNIÃO MARCADA": string | null
-          "REUNIÃO REALIZADA": string | null
           STATUS: string | null
           TEMPERATURA: string | null
-          TEMPERATURA_1: string | null
-          "TEMPO DE FUNIL": string | null
-          VALOR: string | null
+          VALOR: number | null
           "VERIF. CNPJ": string | null
         }
         Insert: {
           BANT?: number | null
           CLOSER?: string | null
           CNPJ?: string | null
-          "CONEXÃO STAKE"?: string | null
           "CURVA DIAS"?: string | null
           "DATA 1º PGTO"?: string | null
-          "DATA AGENDAMENTO"?: string | null
           "DATA DA CALL"?: string | null
-          "DATA DA REUNIÃO"?: string | null
           "DATA DO FEC."?: string | null
           "DATA RETOMADA"?: string | null
-          DEADLINE?: string | null
           EMPRRESA?: string | null
           ID: number
           "LINK CONTRATO"?: string | null
-          "MÊS COMPRA"?: string | null
-          "MÊS REUNIÃO"?: string | null
-          "MÊS VENDA"?: string | null
           "MOTIVOS DE PERDA"?: string | null
           OBSERVAÇÕES?: string | null
           ORIGEM?: string | null
           PRODUTO?: string | null
-          "REUNIÃO MARCADA"?: string | null
-          "REUNIÃO REALIZADA"?: string | null
           STATUS?: string | null
           TEMPERATURA?: string | null
-          TEMPERATURA_1?: string | null
-          "TEMPO DE FUNIL"?: string | null
-          VALOR?: string | null
+          VALOR?: number | null
           "VERIF. CNPJ"?: string | null
         }
         Update: {
           BANT?: number | null
           CLOSER?: string | null
           CNPJ?: string | null
-          "CONEXÃO STAKE"?: string | null
           "CURVA DIAS"?: string | null
           "DATA 1º PGTO"?: string | null
-          "DATA AGENDAMENTO"?: string | null
           "DATA DA CALL"?: string | null
-          "DATA DA REUNIÃO"?: string | null
           "DATA DO FEC."?: string | null
           "DATA RETOMADA"?: string | null
-          DEADLINE?: string | null
           EMPRRESA?: string | null
           ID?: number
           "LINK CONTRATO"?: string | null
-          "MÊS COMPRA"?: string | null
-          "MÊS REUNIÃO"?: string | null
-          "MÊS VENDA"?: string | null
           "MOTIVOS DE PERDA"?: string | null
           OBSERVAÇÕES?: string | null
           ORIGEM?: string | null
           PRODUTO?: string | null
-          "REUNIÃO MARCADA"?: string | null
-          "REUNIÃO REALIZADA"?: string | null
           STATUS?: string | null
           TEMPERATURA?: string | null
-          TEMPERATURA_1?: string | null
-          "TEMPO DE FUNIL"?: string | null
-          VALOR?: string | null
+          VALOR?: number | null
           "VERIF. CNPJ"?: string | null
         }
         Relationships: []

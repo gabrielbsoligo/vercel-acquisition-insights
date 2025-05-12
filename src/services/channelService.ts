@@ -1,4 +1,3 @@
-
 import { DateRange } from "react-day-picker";
 import { 
   fetchNegociacoesData,
@@ -55,6 +54,7 @@ export const fetchChannelsData = async (dateRange?: DateRange) => {
                row.Canal === channel;
       });
       
+      // Access Valor directly (now typed correctly from Supabase)
       const mrrMeta = channelMeta.find((row: any) => row.Tipo === 'MRR')?.Valor || 0;
       const oneTimeMeta = channelMeta.find((row: any) => row.Tipo === 'One Time')?.Valor || 0;
       const totalMeta = Number(mrrMeta) + Number(oneTimeMeta);
