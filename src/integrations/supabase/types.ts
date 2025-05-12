@@ -84,7 +84,7 @@ export type Database = {
           "Show Inbound": number | null
           "Show Out": number | null
           "Show Recom": number | null
-          Tempo: string | null
+          Tempo: number | null
         }
         Insert: {
           Data?: string | null
@@ -103,7 +103,7 @@ export type Database = {
           "Show Inbound"?: number | null
           "Show Out"?: number | null
           "Show Recom"?: number | null
-          Tempo?: unknown | null
+          Tempo?: number | null
         }
         Update: {
           Data?: string | null
@@ -122,7 +122,7 @@ export type Database = {
           "Show Inbound"?: number | null
           "Show Out"?: number | null
           "Show Recom"?: number | null
-          Tempo?: unknown | null
+          Tempo?: number | null
         }
         Relationships: []
       }
