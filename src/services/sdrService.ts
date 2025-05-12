@@ -1,3 +1,4 @@
+
 import { DateRange } from "react-day-picker";
 import { 
   fetchFilteredData,
@@ -6,17 +7,62 @@ import {
   fetchSdrMetaData
 } from "./dataSourceService";
 import { normalizeDateRange } from "./utils/dateUtils";
+import { Database } from '@/integrations/supabase/types';
+
+// Type definition for SDR Meta table
+type SdrMeta = Database['public']['Tables']['Meta Pre Venda']['Row'];
+
+// Helper function to parse time string (hh:mm:ss) to seconds
+const parseTimeStringToSeconds = (timeStr: string | null): number => {
+  if (!timeStr) return 0;
+  
+  const timeParts = timeStr.trim().split(':');
+  
+  if (timeParts.length === 3) {
+    const hours = parseInt(timeParts[0], 10) || 0;
+    const minutes = parseInt(timeParts[1], 10) || 0;
+    const seconds = parseInt(timeParts[2], 10) || 0;
+    return hours * 3600 + minutes * 60 + seconds;
+  }
+  
+  return 0;
+};
+
+// Format seconds to time string (hh:mm:ss)
+const formatSecondsToTimeString = (totalSeconds: number): string => {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+};
+
+// Define the return type for the KPI data
+interface KpiResult {
+  valorRealizado: number;
+  meta: number;
+  percentComplete: number;
+}
+
+// Special return type for time-based KPI
+interface TimeKpiResult {
+  valorRealizado: number; // Seconds
+  valorRealizadoFormatted: string; // HH:MM:SS
+  meta: number; // Seconds
+  metaFormatted: string; // HH:MM:SS
+  percentComplete: number;
+}
 
 // Fetch SDR KPI data
 export const fetchSdrKpiData = async (
   kpiType: string, 
   dateRange?: DateRange, 
   selectedSdr?: string
-) => {
+): Promise<KpiResult | TimeKpiResult> => {
   try {
     const normalizedDateRange = normalizeDateRange(dateRange);
     
-    // Fetch data from Supabase
+    // Fetch data from Supabase with server-side filtering
     const sdrPerformanceData = await fetchFilteredData(
       'sdr_performance', 
       normalizedDateRange,
@@ -31,61 +77,48 @@ export const fetchSdrKpiData = async (
     switch (kpiType) {
       case 'leadsAtivados':
         valorRealizado = sdrPerformanceData.reduce((sum: number, row: any) => 
-          sum + (Number(row['Empresas Ativadas']) || 0), 0);
+          sum + (row['Empresas Ativadas'] || 0), 0);
         break;
         
       case 'ligacoesFeitas':
         valorRealizado = sdrPerformanceData.reduce((sum: number, row: any) => 
-          sum + (Number(row['Ligações Realizadas']) || 0), 0);
+          sum + (row['Ligações Realizadas'] || 0), 0);
         break;
         
       case 'ligacoesAtendidas':
         valorRealizado = sdrPerformanceData.reduce((sum: number, row: any) => 
-          sum + (Number(row['Ligações Atendidas']) || 0), 0);
+          sum + (row['Ligações Atendidas'] || 0), 0);
         break;
         
       case 'tempoLinha':
-        // Assuming time is in format HH:MM:SS or similar
+        // Parse time strings to seconds for summation
         valorRealizado = sdrPerformanceData.reduce((sum: number, row: any) => {
-          if (!row.Tempo) return sum;
-          
-          // Try to parse time string to seconds
-          const timeStr = row.Tempo.trim();
-          const timeParts = timeStr.split(':');
-          
-          if (timeParts.length === 3) {
-            const hours = parseInt(timeParts[0], 10) || 0;
-            const minutes = parseInt(timeParts[1], 10) || 0;
-            const seconds = parseInt(timeParts[2], 10) || 0;
-            return sum + (hours * 3600 + minutes * 60 + seconds);
-          }
-          
-          return sum;
+          return sum + parseTimeStringToSeconds(row.Tempo);
         }, 0);
         break;
         
       case 'reunioesAgendadas':
         valorRealizado = sdrPerformanceData.reduce((sum: number, row: any) => 
           sum + 
-          (Number(row['Marcadas Out']) || 0) + 
-          (Number(row['Marcadas Recom']) || 0) + 
-          (Number(row['Marcadas Inbound']) || 0), 0);
+          (row['Marcadas Out'] || 0) + 
+          (row['Marcadas Recom'] || 0) + 
+          (row['Marcadas Inbound'] || 0), 0);
         break;
         
       case 'reunioesAcontecidas':
         valorRealizado = sdrPerformanceData.reduce((sum: number, row: any) => 
           sum + 
-          (Number(row['Show Out']) || 0) + 
-          (Number(row['Show Recom']) || 0) + 
-          (Number(row['Show Inbound']) || 0), 0);
+          (row['Show Out'] || 0) + 
+          (row['Show Recom'] || 0) + 
+          (row['Show Inbound'] || 0), 0);
         break;
         
       case 'taxaLeadsConexoes': {
         const totalLeads = sdrPerformanceData.reduce((sum: number, row: any) => 
-          sum + (Number(row['Empresas Ativadas']) || 0), 0);
+          sum + (row['Empresas Ativadas'] || 0), 0);
           
         const totalConexoes = sdrPerformanceData.reduce((sum: number, row: any) => 
-          sum + (Number(row['Novas Conexões Stakeholder']) || 0), 0);
+          sum + (row['Novas Conexões Stakeholder'] || 0), 0);
           
         valorRealizado = totalLeads > 0 ? (totalConexoes / totalLeads) * 100 : 0;
         break;
@@ -93,13 +126,13 @@ export const fetchSdrKpiData = async (
       
       case 'taxaConexoesAgendadas': {
         const totalConexoes = sdrPerformanceData.reduce((sum: number, row: any) => 
-          sum + (Number(row['Novas Conexões Stakeholder']) || 0), 0);
+          sum + (row['Novas Conexões Stakeholder'] || 0), 0);
           
         const totalAgendadas = sdrPerformanceData.reduce((sum: number, row: any) => 
           sum + 
-          (Number(row['Marcadas Out']) || 0) + 
-          (Number(row['Marcadas Recom']) || 0) + 
-          (Number(row['Marcadas Inbound']) || 0), 0);
+          (row['Marcadas Out'] || 0) + 
+          (row['Marcadas Recom'] || 0) + 
+          (row['Marcadas Inbound'] || 0), 0);
           
         valorRealizado = totalConexoes > 0 ? (totalAgendadas / totalConexoes) * 100 : 0;
         break;
@@ -108,15 +141,15 @@ export const fetchSdrKpiData = async (
       case 'taxaAgendasAcontecidas': {
         const totalAgendadas = sdrPerformanceData.reduce((sum: number, row: any) => 
           sum + 
-          (Number(row['Marcadas Out']) || 0) + 
-          (Number(row['Marcadas Recom']) || 0) + 
-          (Number(row['Marcadas Inbound']) || 0), 0);
+          (row['Marcadas Out'] || 0) + 
+          (row['Marcadas Recom'] || 0) + 
+          (row['Marcadas Inbound'] || 0), 0);
           
         const totalAcontecidas = sdrPerformanceData.reduce((sum: number, row: any) => 
           sum + 
-          (Number(row['Show Out']) || 0) + 
-          (Number(row['Show Recom']) || 0) + 
-          (Number(row['Show Inbound']) || 0), 0);
+          (row['Show Out'] || 0) + 
+          (row['Show Recom'] || 0) + 
+          (row['Show Inbound'] || 0), 0);
           
         valorRealizado = totalAgendadas > 0 ? (totalAcontecidas / totalAgendadas) * 100 : 0;
         break;
@@ -147,12 +180,10 @@ export const fetchSdrKpiData = async (
     const metaType = metaTypeMapping[kpiType];
     
     if (metaType) {
-      const filteredMetaData = sdrMetaData.filter((row: any) => {
+      const filteredMetaData = sdrMetaData.filter((row: SdrMeta) => {
         if (!row.Mês) return false;
         
         const rowDate = parseDate(row.Mês);
-        if (!rowDate) return false;
-        
         const rowMonth = rowDate.getMonth() + 1;
         const rowYear = rowDate.getFullYear();
         
@@ -163,12 +194,43 @@ export const fetchSdrKpiData = async (
         return matchesDate && matchesType && matchesSdr;
       });
       
-      meta = filteredMetaData.reduce((sum: number, row: any) => sum + (Number(row.Valor) || 0), 0);
+      // Special handling for time values
+      if (kpiType === 'tempoLinha') {
+        meta = filteredMetaData.reduce((sum: number, row: SdrMeta) => {
+          // Parse time string value from meta if it exists
+          const metaTimeValue = row.Valor;
+          if (typeof metaTimeValue === 'string') {
+            return sum + parseTimeStringToSeconds(metaTimeValue);
+          } else if (typeof metaTimeValue === 'number') {
+            // If it's stored as seconds
+            return sum + metaTimeValue;
+          }
+          return sum;
+        }, 0);
+      } else {
+        meta = filteredMetaData.reduce((sum: number, row: SdrMeta) => 
+          sum + (row.Valor || 0), 0);
+      }
     }
 
     // Calculate percentage of completion
     const percentComplete = meta > 0 ? (valorRealizado / meta) * 100 : 0;
 
+    // Format time values for display if necessary
+    if (kpiType === 'tempoLinha') {
+      const formattedValorRealizado = formatSecondsToTimeString(valorRealizado);
+      const formattedMeta = formatSecondsToTimeString(meta);
+      
+      return {
+        valorRealizado: valorRealizado, // Return raw seconds for calculations
+        valorRealizadoFormatted: formattedValorRealizado, // For display
+        meta: meta, // Return raw seconds for calculations
+        metaFormatted: formattedMeta, // For display
+        percentComplete
+      } as TimeKpiResult;
+    }
+
+    // Return numeric values
     return {
       valorRealizado,
       meta,
@@ -176,6 +238,19 @@ export const fetchSdrKpiData = async (
     };
   } catch (error) {
     console.error(`Error fetching ${kpiType} KPI data:`, error);
+    
+    // Handle time-based KPI error case
+    if (kpiType === 'tempoLinha') {
+      return {
+        valorRealizado: 0,
+        valorRealizadoFormatted: '00:00:00',
+        meta: 0,
+        metaFormatted: '00:00:00',
+        percentComplete: 0
+      } as TimeKpiResult;
+    }
+    
+    // Default error response
     return {
       valorRealizado: 0,
       meta: 0,
@@ -184,15 +259,27 @@ export const fetchSdrKpiData = async (
   }
 };
 
-// Fetch SDR performance data for bar chart
+// Defining types for the SDR performance data
+export interface SdrPerformanceData {
+  sdrName: string;
+  leadsAtivados: number;
+  conexoes: number;
+  reunioesAgendadas: number;
+  reunioesAcontecidas: number;
+  taxaLeadsConexoes: number;
+  taxaConexoesAgendadas: number;
+  taxaAgendasAcontecidas: number;
+}
+
+// Fetch SDR performance data
 export const fetchSdrPerformanceData = async (
   dateRange?: DateRange, 
   selectedSdr?: string
-) => {
+): Promise<SdrPerformanceData[]> => {
   try {
     const normalizedDateRange = normalizeDateRange(dateRange);
     
-    // Fetch data from Supabase with filters
+    // Fetch data with server-side filtering
     const sdrPerformanceData = await fetchFilteredData(
       'sdr_performance', 
       normalizedDateRange,
@@ -207,27 +294,27 @@ export const fetchSdrPerformanceData = async (
       sdrs.push(selectedSdr);
     }
     
-    // Calculate metrics for each SDR
+    // Calculate metrics for each SDR with improved type handling
     const sdrPerformance = sdrs.map((sdr: string) => {
       const sdrData = sdrPerformanceData.filter((row: any) => row.SDR === sdr);
       
       const leadsAtivados = sdrData.reduce((sum: number, row: any) => 
-        sum + (Number(row['Empresas Ativadas']) || 0), 0);
+        sum + (row['Empresas Ativadas'] || 0), 0);
         
       const conexoes = sdrData.reduce((sum: number, row: any) => 
-        sum + (Number(row['Novas Conexões Stakeholder']) || 0), 0);
+        sum + (row['Novas Conexões Stakeholder'] || 0), 0);
         
       const reunioesAgendadas = sdrData.reduce((sum: number, row: any) => 
         sum + 
-        (Number(row['Marcadas Out']) || 0) + 
-        (Number(row['Marcadas Recom']) || 0) + 
-        (Number(row['Marcadas Inbound']) || 0), 0);
+        (row['Marcadas Out'] || 0) + 
+        (row['Marcadas Recom'] || 0) + 
+        (row['Marcadas Inbound'] || 0), 0);
         
       const reunioesAcontecidas = sdrData.reduce((sum: number, row: any) => 
         sum + 
-        (Number(row['Show Out']) || 0) + 
-        (Number(row['Show Recom']) || 0) + 
-        (Number(row['Show Inbound']) || 0), 0);
+        (row['Show Out'] || 0) + 
+        (row['Show Recom'] || 0) + 
+        (row['Show Inbound'] || 0), 0);
         
       const taxaLeadsConexoes = leadsAtivados > 0 
         ? (conexoes / leadsAtivados) * 100 
@@ -289,15 +376,23 @@ export const fetchSdrPerformanceData = async (
   }
 };
 
-// Fetch trend data for line chart
+// Define the return type for trend data
+export interface SdrTrendData {
+  periodo: string;
+  leadsAtivados: number;
+  reunioesAgendadas: number;
+  reunioesAcontecidas: number;
+}
+
+// Fetch trend data implementation with improved server-side filtering
 export const fetchSdrTrendData = async (
   dateRange?: DateRange, 
   selectedSdr?: string
-) => {
+): Promise<SdrTrendData[]> => {
   try {
     const normalizedDateRange = normalizeDateRange(dateRange);
     
-    // Fetch data from Supabase with filters
+    // Fetch data with server-side filtering
     const sdrPerformanceData = await fetchFilteredData(
       'sdr_performance', 
       normalizedDateRange,
@@ -317,11 +412,13 @@ export const fetchSdrTrendData = async (
     }
     
     // Group data by selected granularity
-    const periodMap = new Map();
+    const periodMap = new Map<string, SdrTrendData>();
     
     sdrPerformanceData.forEach((row: any) => {
-      const rowDate = parseDate(row.Data);
-      if (!rowDate) return;
+      if (!row.Data) return;
+      
+      const rowDate = typeof row.Data === 'string' ? parseDate(row.Data) : row.Data;
+      if (!rowDate || isNaN(rowDate.getTime())) return;
       
       let periodKey;
       
@@ -348,17 +445,17 @@ export const fetchSdrTrendData = async (
         });
       }
       
-      const periodData = periodMap.get(periodKey);
+      const periodData = periodMap.get(periodKey)!;
       
-      periodData.leadsAtivados += (Number(row['Empresas Ativadas']) || 0);
+      periodData.leadsAtivados += (row['Empresas Ativadas'] || 0);
       periodData.reunioesAgendadas += 
-        (Number(row['Marcadas Out']) || 0) + 
-        (Number(row['Marcadas Recom']) || 0) + 
-        (Number(row['Marcadas Inbound']) || 0);
+        (row['Marcadas Out'] || 0) + 
+        (row['Marcadas Recom'] || 0) + 
+        (row['Marcadas Inbound'] || 0);
       periodData.reunioesAcontecidas += 
-        (Number(row['Show Out']) || 0) + 
-        (Number(row['Show Recom']) || 0) + 
-        (Number(row['Show Inbound']) || 0);
+        (row['Show Out'] || 0) + 
+        (row['Show Recom'] || 0) + 
+        (row['Show Inbound'] || 0);
     });
     
     // Convert map to array and sort by period

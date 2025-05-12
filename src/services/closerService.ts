@@ -7,7 +7,7 @@ import {
 } from "./dataSourceService";
 import { normalizeDateRange } from "./utils/dateUtils";
 
-// Fetch closer KPI data
+// Fetch closer KPI data using Negociacoes table as primary source
 export const fetchCloserKpiData = async (
   kpiType: string, 
   dateRange?: DateRange, 
@@ -16,13 +16,21 @@ export const fetchCloserKpiData = async (
   try {
     const normalizedDateRange = normalizeDateRange(dateRange);
     
-    // Fetch data from Supabase
+    // Fetch Negociacoes data for sales metrics
+    const negociacoesData = await fetchFilteredData(
+      'negociacoes', 
+      normalizedDateRange,
+      selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined
+    );
+    
+    // Fetch Closer Performance data for meeting metrics
     const closerPerformanceData = await fetchFilteredData(
       'closer_performance', 
       normalizedDateRange,
       selectedCloser && selectedCloser !== 'all' ? { Closer: selectedCloser } : undefined
     );
     
+    // Fetch meta data
     const closerMetaData = await fetchCloserMetaData();
 
     // Calculate based on KPI type
@@ -30,37 +38,35 @@ export const fetchCloserKpiData = async (
     
     switch (kpiType) {
       case 'reunioesRealizadas':
+        // Meetings are tracked in the Controle Closer table
         valorRealizado = closerPerformanceData.reduce((sum: number, row: any) => 
           sum + 
-          (Number(row['Show Inbound']) || 0) + 
-          (Number(row['Show Outbound']) || 0) + 
-          (Number(row['Show Indicação']) || 0) +
-          (Number(row['Show Outros']) || 0), 0);
+          (row['Show Inbound'] || 0) + 
+          (row['Show Outbound'] || 0) + 
+          (row['Show Indicação'] || 0) +
+          (row['Show Outros'] || 0), 0);
         break;
         
       case 'vendas':
-        valorRealizado = closerPerformanceData.reduce((sum: number, row: any) => 
-          sum + 
-          (Number(row['Vendas Inbound']) || 0) + 
-          (Number(row['Vendas Outbound']) || 0) + 
-          (Number(row['Vendas indicação']) || 0) +
-          (Number(row['Vendas Outros']) || 0), 0);
+        // Sales are tracked in the Negociacoes table
+        valorRealizado = negociacoesData.filter((row: any) => 
+          row.STATUS === 'Ganho' || row.STATUS === 'Finalizado'
+        ).length;
         break;
         
       case 'taxaConversao': {
+        // Meetings from Controle Closer
         const totalReunioes = closerPerformanceData.reduce((sum: number, row: any) => 
           sum + 
-          (Number(row['Show Inbound']) || 0) + 
-          (Number(row['Show Outbound']) || 0) + 
-          (Number(row['Show Indicação']) || 0) +
-          (Number(row['Show Outros']) || 0), 0);
+          (row['Show Inbound'] || 0) + 
+          (row['Show Outbound'] || 0) + 
+          (row['Show Indicação'] || 0) +
+          (row['Show Outros'] || 0), 0);
           
-        const totalVendas = closerPerformanceData.reduce((sum: number, row: any) => 
-          sum + 
-          (Number(row['Vendas Inbound']) || 0) + 
-          (Number(row['Vendas Outbound']) || 0) + 
-          (Number(row['Vendas indicação']) || 0) +
-          (Number(row['Vendas Outros']) || 0), 0);
+        // Sales from Negociacoes  
+        const totalVendas = negociacoesData.filter((row: any) => 
+          row.STATUS === 'Ganho' || row.STATUS === 'Finalizado'
+        ).length;
           
         valorRealizado = totalReunioes > 0 ? (totalVendas / totalReunioes) * 100 : 0;
         break;
@@ -68,7 +74,7 @@ export const fetchCloserKpiData = async (
       
       case 'indicacoesColetadas':
         valorRealizado = closerPerformanceData.reduce((sum: number, row: any) => 
-          sum + (Number(row['Indicação Coletadas']) || 0), 0);
+          sum + (row['Indicação Coletadas'] || 0), 0);
         break;
         
       default:
@@ -95,8 +101,6 @@ export const fetchCloserKpiData = async (
         if (!row.Mês) return false;
         
         const rowDate = parseDate(row.Mês);
-        if (!rowDate) return false;
-        
         const rowMonth = rowDate.getMonth() + 1;
         const rowYear = rowDate.getFullYear();
         
@@ -107,7 +111,7 @@ export const fetchCloserKpiData = async (
         return matchesDate && matchesType && matchesCloser;
       });
       
-      meta = filteredMetaData.reduce((sum: number, row: any) => sum + (Number(row.Valor) || 0), 0);
+      meta = filteredMetaData.reduce((sum: number, row: any) => sum + (row.Valor || 0), 0);
     }
 
     // Calculate percentage of completion
@@ -136,15 +140,26 @@ export const fetchCloserPerformanceData = async (
   try {
     const normalizedDateRange = normalizeDateRange(dateRange);
     
-    // Fetch data from Supabase with filters
+    // Fetch Controle Closer data for meetings
     const closerPerformanceData = await fetchFilteredData(
       'closer_performance', 
       normalizedDateRange,
       selectedCloser && selectedCloser !== 'all' ? { Closer: selectedCloser } : undefined
     );
     
-    // Get unique closers
-    const closers = Array.from(new Set(closerPerformanceData.map((row: any) => row.Closer))).filter(Boolean);
+    // Fetch Negociacoes data for sales
+    const negociacoesData = await fetchFilteredData(
+      'negociacoes', 
+      normalizedDateRange,
+      selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined
+    );
+    
+    // Get unique closers from both datasets
+    const closersFromPerformance = Array.from(new Set(closerPerformanceData.map((row: any) => row.Closer))).filter(Boolean);
+    const closersFromNegociacoes = Array.from(new Set(negociacoesData.map((row: any) => row.CLOSER))).filter(Boolean);
+    
+    // Combine unique closers from both datasets
+    const closers = Array.from(new Set([...closersFromPerformance, ...closersFromNegociacoes]));
     
     // If a specific closer is selected and it's not in the filtered data, add it
     if (selectedCloser && selectedCloser !== 'all' && !closers.includes(selectedCloser)) {
@@ -153,28 +168,28 @@ export const fetchCloserPerformanceData = async (
     
     // Calculate metrics for each closer
     const closerPerformance = closers.map((closer: string) => {
+      // Meetings data from closerPerformanceData
       const closerData = closerPerformanceData.filter((row: any) => row.Closer === closer);
       
       const reunioesRealizadas = closerData.reduce((sum: number, row: any) => 
         sum + 
-        (Number(row['Show Inbound']) || 0) + 
-        (Number(row['Show Outbound']) || 0) + 
-        (Number(row['Show Indicação']) || 0) +
-        (Number(row['Show Outros']) || 0), 0);
-        
-      const vendas = closerData.reduce((sum: number, row: any) => 
-        sum + 
-        (Number(row['Vendas Inbound']) || 0) + 
-        (Number(row['Vendas Outbound']) || 0) + 
-        (Number(row['Vendas indicação']) || 0) +
-        (Number(row['Vendas Outros']) || 0), 0);
+        (row['Show Inbound'] || 0) + 
+        (row['Show Outbound'] || 0) + 
+        (row['Show Indicação'] || 0) +
+        (row['Show Outros'] || 0), 0);
+      
+      // Sales data from negociacoesData
+      const closerNegociations = negociacoesData.filter((row: any) => row.CLOSER === closer);
+      const vendas = closerNegociations.filter((row: any) => 
+        row.STATUS === 'Ganho' || row.STATUS === 'Finalizado'
+      ).length;
         
       const taxaConversao = reunioesRealizadas > 0 
         ? (vendas / reunioesRealizadas) * 100 
         : 0;
         
       const indicacoesColetadas = closerData.reduce((sum: number, row: any) => 
-        sum + (Number(row['Indicação Coletadas']) || 0), 0);
+        sum + (row['Indicação Coletadas'] || 0), 0);
       
       return {
         closerName: closer,

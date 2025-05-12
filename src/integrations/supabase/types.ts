@@ -84,7 +84,7 @@ export type Database = {
           "Show Inbound": number | null
           "Show Out": number | null
           "Show Recom": number | null
-          Tempo: number | null
+          Tempo: string | null
         }
         Insert: {
           Data?: string | null

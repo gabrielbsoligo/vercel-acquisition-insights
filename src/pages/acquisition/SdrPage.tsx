@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { DateRange } from "react-day-picker";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -43,8 +42,10 @@ import {
   fetchSdrKpiData,
   fetchSdrPerformanceData,
   fetchSdrTrendData,
-  fetchSalesFunnelData,
-} from "@/services/dataService";
+  SdrPerformanceData,
+  SdrTrendData
+} from "@/services/sdrService";
+import { fetchSalesFunnelData, FunnelData } from "@/services/salesFunnelService";
 
 const SdrPage: React.FC = () => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
@@ -57,17 +58,17 @@ const SdrPage: React.FC = () => {
   const [leadsActivated, setLeadsActivated] = useState({ value: 0, goal: 0, percent: 0 });
   const [callsMade, setCallsMade] = useState({ value: 0, goal: 0, percent: 0 });
   const [callsAnswered, setCallsAnswered] = useState({ value: 0, goal: 0, percent: 0 });
-  const [timeInLine, setTimeInLine] = useState({ value: "00:00:00", goal: 0, percent: 0 });
+  const [timeInLine, setTimeInLine] = useState({ value: "00:00:00", goal: "00:00:00", percent: 0 });
   const [meetingsScheduled, setMeetingsScheduled] = useState({ value: 0, goal: 0, percent: 0 });
   const [meetingsHeld, setMeetingsHeld] = useState({ value: 0, goal: 0, percent: 0 });
   const [leadsToConnectionsRate, setLeadsToConnectionsRate] = useState({ value: 0, goal: 0, percent: 0 });
   const [connectionsToScheduledRate, setConnectionsToScheduledRate] = useState({ value: 0, goal: 0, percent: 0 });
   
   // State for chart data
-  const [performanceData, setPerformanceData] = useState<any[]>([]);
-  const [trendData, setTrendData] = useState<any[]>([]);
-  const [funnelData, setFunnelData] = useState<any[]>([]);
-  const [tableData, setTableData] = useState<any[]>([]);
+  const [performanceData, setPerformanceData] = useState<SdrPerformanceData[]>([]);
+  const [trendData, setTrendData] = useState<SdrTrendData[]>([]);
+  const [funnelData, setFunnelData] = useState<FunnelData[]>([]);
+  const [tableData, setTableData] = useState<SdrPerformanceData[]>([]);
   
   // Loading states
   const [isLoading, setIsLoading] = useState(true);
@@ -81,63 +82,60 @@ const SdrPage: React.FC = () => {
         const leadsData = await fetchSdrKpiData("leadsAtivados", dateRange, selectedSdr);
         setLeadsActivated({ 
           value: leadsData.valorRealizado, 
-          goal: leadsData.meta || 0, 
-          percent: leadsData.percentComplete || 0 
+          goal: leadsData.meta, 
+          percent: leadsData.percentComplete 
         });
         
         const callsData = await fetchSdrKpiData("ligacoesFeitas", dateRange, selectedSdr);
         setCallsMade({ 
           value: callsData.valorRealizado, 
-          goal: callsData.meta || 0, 
-          percent: callsData.percentComplete || 0 
+          goal: callsData.meta, 
+          percent: callsData.percentComplete 
         });
         
         const answeredData = await fetchSdrKpiData("ligacoesAtendidas", dateRange, selectedSdr);
         setCallsAnswered({ 
           value: answeredData.valorRealizado, 
-          goal: answeredData.meta || 0, 
-          percent: answeredData.percentComplete || 0 
+          goal: answeredData.meta, 
+          percent: answeredData.percentComplete 
         });
         
         const timeData = await fetchSdrKpiData("tempoLinha", dateRange, selectedSdr);
-        // Convert seconds to HH:MM:SS format
-        const hours = Math.floor(timeData.valorRealizado / 3600);
-        const minutes = Math.floor((timeData.valorRealizado % 3600) / 60);
-        const seconds = timeData.valorRealizado % 60;
-        const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        
-        setTimeInLine({ 
-          value: formattedTime, 
-          goal: timeData.meta || 0, 
-          percent: timeData.percentComplete || 0 
-        });
+        // Handle special return type for tempoLinha
+        if ('valorRealizadoFormatted' in timeData) {
+          setTimeInLine({ 
+            value: timeData.valorRealizadoFormatted, 
+            goal: timeData.metaFormatted, 
+            percent: timeData.percentComplete 
+          });
+        }
         
         const meetingsScheduledData = await fetchSdrKpiData("reunioesAgendadas", dateRange, selectedSdr);
         setMeetingsScheduled({ 
           value: meetingsScheduledData.valorRealizado, 
-          goal: meetingsScheduledData.meta || 0, 
-          percent: meetingsScheduledData.percentComplete || 0 
+          goal: meetingsScheduledData.meta, 
+          percent: meetingsScheduledData.percentComplete 
         });
         
         const meetingsHeldData = await fetchSdrKpiData("reunioesAcontecidas", dateRange, selectedSdr);
         setMeetingsHeld({ 
           value: meetingsHeldData.valorRealizado, 
-          goal: meetingsHeldData.meta || 0, 
-          percent: meetingsHeldData.percentComplete || 0 
+          goal: meetingsHeldData.meta, 
+          percent: meetingsHeldData.percentComplete 
         });
         
         const leadsToConnectionsData = await fetchSdrKpiData("taxaLeadsConexoes", dateRange, selectedSdr);
         setLeadsToConnectionsRate({ 
           value: Number(leadsToConnectionsData.valorRealizado.toFixed(1)), 
-          goal: leadsToConnectionsData.meta || 0, 
-          percent: leadsToConnectionsData.percentComplete || 0 
+          goal: leadsToConnectionsData.meta, 
+          percent: leadsToConnectionsData.percentComplete 
         });
         
         const connectionsToScheduledData = await fetchSdrKpiData("taxaConexoesAgendadas", dateRange, selectedSdr);
         setConnectionsToScheduledRate({ 
           value: Number(connectionsToScheduledData.valorRealizado.toFixed(1)), 
-          goal: connectionsToScheduledData.meta || 0, 
-          percent: connectionsToScheduledData.percentComplete || 0 
+          goal: connectionsToScheduledData.meta, 
+          percent: connectionsToScheduledData.percentComplete 
         });
         
         // Load chart data
