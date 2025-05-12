@@ -1,3 +1,4 @@
+
 import supabase from './supabaseService';
 import Papa from 'papaparse';
 import { Database } from '@/integrations/supabase/types';
@@ -48,7 +49,7 @@ const getDateColumnForTable = (tableName: string): string | null => {
   const dateColumnMapping: Record<string, string> = {
     'Controle Pre Venda': 'Data',
     'Controle Closer': 'Data', 
-    'Negociacoes': 'DATA DA REUNIÃO',
+    'Negociacoes': 'DATA DA CALL',
     'Leadbroker': 'DATA DA COMPRA',
     'Recomendacao': 'DATA DA RECOMENDAÇÃO',
     'Outbound': 'DATA DO AGENDAMENTO'
@@ -72,6 +73,16 @@ export const fetchFilteredData = async (
     // Add date range filters if applicable
     const dateColumn = getDateColumnForTable(supabaseTableName);
     
+    // Add date filtering on the server side if possible
+    if (dateColumn) {
+      const fromDate = dateRange.from.toISOString().split('T')[0];
+      const toDate = dateRange.to.toISOString().split('T')[0];
+      
+      query = query
+        .gte(dateColumn, fromDate)
+        .lte(dateColumn, toDate);
+    }
+    
     // Add any additional filters
     if (additionalFilters) {
       Object.entries(additionalFilters).forEach(([key, value]) => {
@@ -88,14 +99,22 @@ export const fetchFilteredData = async (
       throw error;
     }
     
-    // Filter by date range in JS for now since different tables have different date formats
-    // Later we can implement server-side filtering when date formats are standardized
-    if (dateColumn && data) {
+    // If server-side date filtering wasn't possible, filter in JS
+    if (!dateColumn && data) {
       return data.filter((row: any) => {
-        if (!row[dateColumn]) return true; // Include rows without dates
+        // Try to find any date column in the row
+        const dateFields = Object.entries(row).filter(([key, value]) => 
+          key.toUpperCase().includes('DATA') || key.toUpperCase().includes('DATE') || key === 'Data' || key === 'Mês'
+        );
         
-        const rowDate = parseDate(row[dateColumn]);
-        return isDateInRange(rowDate, dateRange.from, dateRange.to);
+        if (dateFields.length === 0) return true; // No date fields, include the row
+        
+        // Check if any date field falls within the range
+        return dateFields.some(([key, value]) => {
+          if (!value) return true; // No date, include the row
+          const rowDate = typeof value === 'string' ? parseDate(value) : new Date();
+          return isDateInRange(rowDate, dateRange.from, dateRange.to);
+        });
       });
     }
     

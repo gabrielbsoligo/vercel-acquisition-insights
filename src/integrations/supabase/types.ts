@@ -251,7 +251,7 @@ export type Database = {
           BANT: number | null
           CLOSER: string | null
           CNPJ: string | null
-          "CURVA DIAS": string | null
+          "CURVA DIAS": number | null
           "DATA 1º PGTO": string | null
           "DATA DA CALL": string | null
           "DATA DO FEC.": string | null
@@ -272,7 +272,7 @@ export type Database = {
           BANT?: number | null
           CLOSER?: string | null
           CNPJ?: string | null
-          "CURVA DIAS"?: string | null
+          "CURVA DIAS"?: number | null
           "DATA 1º PGTO"?: string | null
           "DATA DA CALL"?: string | null
           "DATA DO FEC."?: string | null
@@ -293,7 +293,7 @@ export type Database = {
           BANT?: number | null
           CLOSER?: string | null
           CNPJ?: string | null
-          "CURVA DIAS"?: string | null
+          "CURVA DIAS"?: number | null
           "DATA 1º PGTO"?: string | null
           "DATA DA CALL"?: string | null
           "DATA DO FEC."?: string | null

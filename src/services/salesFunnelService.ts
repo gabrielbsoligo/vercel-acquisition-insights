@@ -18,24 +18,38 @@ export const fetchSalesFunnelData = async (
       selectedSdr && selectedSdr !== 'all' ? { SDR: selectedSdr } : undefined
     );
     
-    // Calculate funnel metrics
-    const leadsAtivados = sdrPerformanceData.reduce((sum: number, row: any) => 
-      sum + (Number(row['Empresas Ativadas']) || 0), 0);
+    // Calculate funnel metrics with safe type checking
+    const leadsAtivados = sdrPerformanceData.reduce((sum: number, row: any) => {
+      const value = row['Empresas Ativadas'];
+      return sum + (typeof value === 'number' ? value : 0);
+    }, 0);
       
-    const conexoes = sdrPerformanceData.reduce((sum: number, row: any) => 
-      sum + (Number(row['Novas Conexões Stakeholder']) || 0), 0);
+    const conexoes = sdrPerformanceData.reduce((sum: number, row: any) => {
+      const value = row['Novas Conexões Stakeholder'];
+      return sum + (typeof value === 'number' ? value : 0);
+    }, 0);
       
-    const reunioesAgendadas = sdrPerformanceData.reduce((sum: number, row: any) => 
-      sum + 
-      (Number(row['Marcadas Out']) || 0) + 
-      (Number(row['Marcadas Recom']) || 0) + 
-      (Number(row['Marcadas Inbound']) || 0), 0);
+    const reunioesAgendadas = sdrPerformanceData.reduce((sum: number, row: any) => {
+      const marcadasOut = row['Marcadas Out'];
+      const marcadasRecom = row['Marcadas Recom'];
+      const marcadasInbound = row['Marcadas Inbound'];
       
-    const reunioesAcontecidas = sdrPerformanceData.reduce((sum: number, row: any) => 
-      sum + 
-      (Number(row['Show Out']) || 0) + 
-      (Number(row['Show Recom']) || 0) + 
-      (Number(row['Show Inbound']) || 0), 0);
+      return sum + 
+        (typeof marcadasOut === 'number' ? marcadasOut : 0) + 
+        (typeof marcadasRecom === 'number' ? marcadasRecom : 0) + 
+        (typeof marcadasInbound === 'number' ? marcadasInbound : 0);
+    }, 0);
+      
+    const reunioesAcontecidas = sdrPerformanceData.reduce((sum: number, row: any) => {
+      const showOut = row['Show Out'];
+      const showRecom = row['Show Recom'];
+      const showInbound = row['Show Inbound'];
+      
+      return sum + 
+        (typeof showOut === 'number' ? showOut : 0) + 
+        (typeof showRecom === 'number' ? showRecom : 0) + 
+        (typeof showInbound === 'number' ? showInbound : 0);
+    }, 0);
     
     // Create funnel data array
     const funnelData = [

@@ -55,10 +55,21 @@ export const fetchChannelsData = async (dateRange?: DateRange) => {
                row.Canal === channel;
       });
       
-      // Access Valor directly (now typed correctly from Supabase)
-      const mrrMeta = channelMeta.find((row: any) => row.Tipo === 'MRR')?.Valor || 0;
-      const oneTimeMeta = channelMeta.find((row: any) => row.Tipo === 'One Time')?.Valor || 0;
-      const totalMeta = Number(mrrMeta) + Number(oneTimeMeta);
+      // Access values using safe type checking
+      let mrrMeta = 0;
+      let oneTimeMeta = 0;
+      
+      const mrrMetaRow = channelMeta.find((row: any) => row.Tipo === 'MRR');
+      if (mrrMetaRow && typeof mrrMetaRow.Valor === 'number') {
+        mrrMeta = mrrMetaRow.Valor;
+      }
+      
+      const oneTimeMetaRow = channelMeta.find((row: any) => row.Tipo === 'One Time');
+      if (oneTimeMetaRow && typeof oneTimeMetaRow.Valor === 'number') {
+        oneTimeMeta = oneTimeMetaRow.Valor;
+      }
+      
+      const totalMeta = mrrMeta + oneTimeMeta;
       
       const percentComplete = totalMeta > 0 ? (totalValue / totalMeta) * 100 : 0;
       
