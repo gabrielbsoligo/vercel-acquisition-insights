@@ -1,5 +1,5 @@
 
-import supabase from './supabaseService';
+import { supabase } from '@/integrations/supabase/client';
 import { SupabaseTableName, mapInternalToSupabaseTable, getDateColumnForTable } from './utils/tableMapping';
 import { formatDateForQuery } from './utils/dateUtils';
 
@@ -26,18 +26,27 @@ export const fetchFilteredData = async (
     // Add date range filters on the server side
     const dateColumn = getDateColumnForTable(supabaseTableName);
     
+    console.log(`Fetching data from table: ${supabaseTableName}`);
+    console.log(`Date column: ${dateColumn}`);
+    console.log(`Date range: ${dateRange.from.toISOString()} to ${dateRange.to.toISOString()}`);
+    
     if (dateColumn) {
       // Format dates to ISO strings (YYYY-MM-DD)
       const fromDate = formatDateForQuery(dateRange.from);
       const toDate = formatDateForQuery(dateRange.to);
       
+      console.log(`Formatted date range for query: ${fromDate} to ${toDate}`);
+      
       query = query
         .gte(dateColumn, fromDate)
         .lte(dateColumn, toDate);
+    } else {
+      console.log('No date column found for filtering - will return all data');
     }
     
     // Add any additional filters
     if (additionalFilters) {
+      console.log('Additional filters:', additionalFilters);
       Object.entries(additionalFilters).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
           // Check if the key includes special operators (_gte, _lte, etc.)
@@ -74,6 +83,13 @@ export const fetchFilteredData = async (
     if (error) {
       console.error(`Error fetching data from Supabase table ${supabaseTableName}:`, error);
       throw error;
+    }
+    
+    console.log(`Fetched ${data?.length || 0} records from ${supabaseTableName}`);
+    if (data && data.length > 0) {
+      console.log('Sample data:', data[0]);
+    } else {
+      console.log('No data returned from query');
     }
     
     return data || [];
