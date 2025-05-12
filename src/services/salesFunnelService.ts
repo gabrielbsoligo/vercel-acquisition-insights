@@ -18,38 +18,24 @@ export const fetchSalesFunnelData = async (
       selectedSdr && selectedSdr !== 'all' ? { SDR: selectedSdr } : undefined
     );
     
-    // Calculate funnel metrics with safe type checking
-    const leadsAtivados = sdrPerformanceData.reduce((sum: number, row: any) => {
-      const value = row['Empresas Ativadas'];
-      return sum + (typeof value === 'number' ? value : 0);
-    }, 0);
+    // Calculate funnel metrics with improved type handling
+    const leadsAtivados = sdrPerformanceData.reduce((sum: number, row: any) => 
+      sum + (row['Empresas Ativadas'] || 0), 0);
       
-    const conexoes = sdrPerformanceData.reduce((sum: number, row: any) => {
-      const value = row['Novas Conexões Stakeholder'];
-      return sum + (typeof value === 'number' ? value : 0);
-    }, 0);
+    const conexoes = sdrPerformanceData.reduce((sum: number, row: any) => 
+      sum + (row['Novas Conexões Stakeholder'] || 0), 0);
       
-    const reunioesAgendadas = sdrPerformanceData.reduce((sum: number, row: any) => {
-      const marcadasOut = row['Marcadas Out'];
-      const marcadasRecom = row['Marcadas Recom'];
-      const marcadasInbound = row['Marcadas Inbound'];
+    const reunioesAgendadas = sdrPerformanceData.reduce((sum: number, row: any) => 
+      sum + 
+      (row['Marcadas Out'] || 0) + 
+      (row['Marcadas Recom'] || 0) + 
+      (row['Marcadas Inbound'] || 0), 0);
       
-      return sum + 
-        (typeof marcadasOut === 'number' ? marcadasOut : 0) + 
-        (typeof marcadasRecom === 'number' ? marcadasRecom : 0) + 
-        (typeof marcadasInbound === 'number' ? marcadasInbound : 0);
-    }, 0);
-      
-    const reunioesAcontecidas = sdrPerformanceData.reduce((sum: number, row: any) => {
-      const showOut = row['Show Out'];
-      const showRecom = row['Show Recom'];
-      const showInbound = row['Show Inbound'];
-      
-      return sum + 
-        (typeof showOut === 'number' ? showOut : 0) + 
-        (typeof showRecom === 'number' ? showRecom : 0) + 
-        (typeof showInbound === 'number' ? showInbound : 0);
-    }, 0);
+    const reunioesAcontecidas = sdrPerformanceData.reduce((sum: number, row: any) => 
+      sum + 
+      (row['Show Out'] || 0) + 
+      (row['Show Recom'] || 0) + 
+      (row['Show Inbound'] || 0), 0);
     
     // Create funnel data array
     const funnelData = [

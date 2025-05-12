@@ -1,7 +1,6 @@
 
 import supabase from './supabaseService';
 import Papa from 'papaparse';
-import { Database } from '@/integrations/supabase/types';
 
 export const parseDate = (dateString: string): Date => {
   // Support for both DD/MM/YYYY and YYYY-MM-DD formats
@@ -58,7 +57,7 @@ const getDateColumnForTable = (tableName: string): string | null => {
   return dateColumnMapping[tableName] || null;
 };
 
-// Modified to use Supabase for data sources
+// Modified to use Supabase for data sources with server-side date filtering
 export const fetchFilteredData = async (
   internalTableName: string,
   dateRange: { from: Date, to: Date },
@@ -67,14 +66,14 @@ export const fetchFilteredData = async (
   try {
     const supabaseTableName = mapInternalToSupabaseTable(internalTableName);
     
-    // Start the query - simplified to avoid type recursion issues
+    // Start the query
     let query = supabase.from(supabaseTableName).select('*');
     
-    // Add date range filters if applicable
+    // Add date range filters on the server side
     const dateColumn = getDateColumnForTable(supabaseTableName);
     
-    // Add date filtering on the server side if possible
     if (dateColumn) {
+      // Format dates to ISO strings (YYYY-MM-DD)
       const fromDate = dateRange.from.toISOString().split('T')[0];
       const toDate = dateRange.to.toISOString().split('T')[0];
       
@@ -87,7 +86,30 @@ export const fetchFilteredData = async (
     if (additionalFilters) {
       Object.entries(additionalFilters).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          query = query.eq(key, value);
+          // Check if the key includes special operators (_gte, _lte, etc.)
+          if (key.includes('_gte')) {
+            const actualKey = key.split('_gte')[0];
+            query = query.gte(actualKey, value);
+          } else if (key.includes('_lte')) {
+            const actualKey = key.split('_lte')[0];
+            query = query.lte(actualKey, value);
+          } else if (key.includes('_gt')) {
+            const actualKey = key.split('_gt')[0];
+            query = query.gt(actualKey, value);
+          } else if (key.includes('_lt')) {
+            const actualKey = key.split('_lt')[0];
+            query = query.lt(actualKey, value);
+          } else if (key.includes('_neq')) {
+            const actualKey = key.split('_neq')[0];
+            query = query.neq(actualKey, value);
+          } else if (key.includes('_in')) {
+            const actualKey = key.split('_in')[0];
+            if (Array.isArray(value)) {
+              query = query.in(actualKey, value);
+            }
+          } else {
+            query = query.eq(key, value);
+          }
         }
       });
     }
@@ -97,25 +119,6 @@ export const fetchFilteredData = async (
     if (error) {
       console.error(`Error fetching data from Supabase table ${supabaseTableName}:`, error);
       throw error;
-    }
-    
-    // If server-side date filtering wasn't possible, filter in JS
-    if (!dateColumn && data) {
-      return data.filter((row: any) => {
-        // Try to find any date column in the row
-        const dateFields = Object.entries(row).filter(([key, value]) => 
-          key.toUpperCase().includes('DATA') || key.toUpperCase().includes('DATE') || key === 'Data' || key === 'Mês'
-        );
-        
-        if (dateFields.length === 0) return true; // No date fields, include the row
-        
-        // Check if any date field falls within the range
-        return dateFields.some(([key, value]) => {
-          if (!value) return true; // No date, include the row
-          const rowDate = typeof value === 'string' ? parseDate(value) : new Date();
-          return isDateInRange(rowDate, dateRange.from, dateRange.to);
-        });
-      });
     }
     
     return data || [];
