@@ -3,11 +3,17 @@ import { DateRange } from "react-day-picker";
 import { fetchFilteredData } from "./dataSourceService";
 import { normalizeDateRange } from "./utils/dateUtils";
 
+// Define the return type for funnel data
+export interface FunnelData {
+  etapa: string;
+  valor: number;
+}
+
 // Fetch sales funnel data
 export const fetchSalesFunnelData = async (
   dateRange?: DateRange, 
   selectedSdr?: string
-) => {
+): Promise<FunnelData[]> => {
   try {
     const normalizedDateRange = normalizeDateRange(dateRange);
     
@@ -38,7 +44,7 @@ export const fetchSalesFunnelData = async (
       (row['Show Inbound'] || 0), 0);
     
     // Create funnel data array
-    const funnelData = [
+    const funnelData: FunnelData[] = [
       { etapa: 'Leads Ativados', valor: leadsAtivados },
       { etapa: 'Conexões', valor: conexoes },
       { etapa: 'Reuniões Agendadas', valor: reunioesAgendadas },

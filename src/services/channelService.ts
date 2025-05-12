@@ -7,6 +7,10 @@ import {
   parseDate
 } from "./dataSourceService";
 import { normalizeDateRange } from "./utils/dateUtils";
+import { Database } from "@/integrations/supabase/types";
+
+// Type definitions for Meta Empresa data
+type MetaEmpresa = Database['public']['Tables']['Meta Empresa']['Row'];
 
 // Fetch channels data with dynamically populated channels
 export const fetchChannelsData = async (dateRange?: DateRange) => {
@@ -48,7 +52,7 @@ export const fetchChannelsData = async (dateRange?: DateRange) => {
       const fromMonth = normalizedDateRange.from.getMonth() + 1;
       const fromYear = normalizedDateRange.from.getFullYear();
       
-      const channelMeta = empresaMetaData.filter((row: any) => {
+      const channelMeta = empresaMetaData.filter((row) => {
         if (!row.Mês) return false;
         
         const rowDate = parseDate(row.Mês);
@@ -60,16 +64,16 @@ export const fetchChannelsData = async (dateRange?: DateRange) => {
                row.Canal === channel;
       });
       
-      // Access values with proper type handling
+      // Access values with proper type handling for Meta Empresa rows
       let mrrMeta = 0;
       let oneTimeMeta = 0;
       
-      const mrrMetaRow = channelMeta.find((row: any) => row.Tipo === 'MRR');
+      const mrrMetaRow = channelMeta.find((row) => row.Tipo === 'MRR') as MetaEmpresa | undefined;
       if (mrrMetaRow && mrrMetaRow.Valor !== null) {
         mrrMeta = mrrMetaRow.Valor;
       }
       
-      const oneTimeMetaRow = channelMeta.find((row: any) => row.Tipo === 'One Time');
+      const oneTimeMetaRow = channelMeta.find((row) => row.Tipo === 'One Time') as MetaEmpresa | undefined;
       if (oneTimeMetaRow && oneTimeMetaRow.Valor !== null) {
         oneTimeMeta = oneTimeMetaRow.Valor;
       }

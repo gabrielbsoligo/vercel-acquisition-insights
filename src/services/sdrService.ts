@@ -7,6 +7,10 @@ import {
   fetchSdrMetaData
 } from "./dataSourceService";
 import { normalizeDateRange } from "./utils/dateUtils";
+import { Database } from '@/integrations/supabase/types';
+
+// Type definition for SDR Meta table
+type SdrMeta = Database['public']['Tables']['Meta Pre Venda']['Row'];
 
 // Helper function to parse time string (hh:mm:ss) to seconds
 const parseTimeStringToSeconds = (timeStr: string | null): number => {
@@ -33,12 +37,28 @@ const formatSecondsToTimeString = (totalSeconds: number): string => {
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 };
 
+// Define the return type for the KPI data
+interface KpiResult {
+  valorRealizado: number;
+  meta: number;
+  percentComplete: number;
+}
+
+// Special return type for time-based KPI
+interface TimeKpiResult {
+  valorRealizado: number; // Seconds
+  valorRealizadoFormatted: string; // HH:MM:SS
+  meta: number; // Seconds
+  metaFormatted: string; // HH:MM:SS
+  percentComplete: number;
+}
+
 // Fetch SDR KPI data
 export const fetchSdrKpiData = async (
   kpiType: string, 
   dateRange?: DateRange, 
   selectedSdr?: string
-) => {
+): Promise<KpiResult | TimeKpiResult> => {
   try {
     const normalizedDateRange = normalizeDateRange(dateRange);
     
@@ -160,7 +180,7 @@ export const fetchSdrKpiData = async (
     const metaType = metaTypeMapping[kpiType];
     
     if (metaType) {
-      const filteredMetaData = sdrMetaData.filter((row: any) => {
+      const filteredMetaData = sdrMetaData.filter((row: SdrMeta) => {
         if (!row.Mês) return false;
         
         const rowDate = parseDate(row.Mês);
@@ -176,7 +196,7 @@ export const fetchSdrKpiData = async (
       
       // Special handling for time values
       if (kpiType === 'tempoLinha') {
-        meta = filteredMetaData.reduce((sum: number, row: any) => {
+        meta = filteredMetaData.reduce((sum: number, row: SdrMeta) => {
           // Parse time string value from meta if it exists
           const metaTimeValue = row.Valor;
           if (typeof metaTimeValue === 'string') {
@@ -188,7 +208,7 @@ export const fetchSdrKpiData = async (
           return sum;
         }, 0);
       } else {
-        meta = filteredMetaData.reduce((sum: number, row: any) => 
+        meta = filteredMetaData.reduce((sum: number, row: SdrMeta) => 
           sum + (row.Valor || 0), 0);
       }
     }
@@ -202,14 +222,15 @@ export const fetchSdrKpiData = async (
       const formattedMeta = formatSecondsToTimeString(meta);
       
       return {
-        valorRealizado: formattedValorRealizado,
-        valorRealizadoSeconds: valorRealizado, // Keep raw seconds for calculations
-        meta: formattedMeta,
-        metaSeconds: meta, // Keep raw seconds for calculations
+        valorRealizado: valorRealizado, // Return raw seconds for calculations
+        valorRealizadoFormatted: formattedValorRealizado, // For display
+        meta: meta, // Return raw seconds for calculations
+        metaFormatted: formattedMeta, // For display
         percentComplete
-      };
+      } as TimeKpiResult;
     }
 
+    // Return numeric values
     return {
       valorRealizado,
       meta,
@@ -217,21 +238,44 @@ export const fetchSdrKpiData = async (
     };
   } catch (error) {
     console.error(`Error fetching ${kpiType} KPI data:`, error);
+    
+    // Handle time-based KPI error case
+    if (kpiType === 'tempoLinha') {
+      return {
+        valorRealizado: 0,
+        valorRealizadoFormatted: '00:00:00',
+        meta: 0,
+        metaFormatted: '00:00:00',
+        percentComplete: 0
+      } as TimeKpiResult;
+    }
+    
+    // Default error response
     return {
-      valorRealizado: kpiType === 'tempoLinha' ? '00:00:00' : 0,
-      meta: kpiType === 'tempoLinha' ? '00:00:00' : 0,
+      valorRealizado: 0,
+      meta: 0,
       percentComplete: 0
     };
   }
 };
 
-// Since sdrService.ts is getting very large, I'll focus on the key changes.
-// Here's the implementation for fetchSdrPerformanceData with proper type handling:
+// Defining types for the SDR performance data
+export interface SdrPerformanceData {
+  sdrName: string;
+  leadsAtivados: number;
+  conexoes: number;
+  reunioesAgendadas: number;
+  reunioesAcontecidas: number;
+  taxaLeadsConexoes: number;
+  taxaConexoesAgendadas: number;
+  taxaAgendasAcontecidas: number;
+}
 
+// Fetch SDR performance data
 export const fetchSdrPerformanceData = async (
   dateRange?: DateRange, 
   selectedSdr?: string
-) => {
+): Promise<SdrPerformanceData[]> => {
   try {
     const normalizedDateRange = normalizeDateRange(dateRange);
     
@@ -332,11 +376,19 @@ export const fetchSdrPerformanceData = async (
   }
 };
 
+// Define the return type for trend data
+export interface SdrTrendData {
+  periodo: string;
+  leadsAtivados: number;
+  reunioesAgendadas: number;
+  reunioesAcontecidas: number;
+}
+
 // Fetch trend data implementation with improved server-side filtering
 export const fetchSdrTrendData = async (
   dateRange?: DateRange, 
   selectedSdr?: string
-) => {
+): Promise<SdrTrendData[]> => {
   try {
     const normalizedDateRange = normalizeDateRange(dateRange);
     
@@ -360,7 +412,7 @@ export const fetchSdrTrendData = async (
     }
     
     // Group data by selected granularity
-    const periodMap = new Map();
+    const periodMap = new Map<string, SdrTrendData>();
     
     sdrPerformanceData.forEach((row: any) => {
       if (!row.Data) return;
@@ -393,7 +445,7 @@ export const fetchSdrTrendData = async (
         });
       }
       
-      const periodData = periodMap.get(periodKey);
+      const periodData = periodMap.get(periodKey)!;
       
       periodData.leadsAtivados += (row['Empresas Ativadas'] || 0);
       periodData.reunioesAgendadas += 

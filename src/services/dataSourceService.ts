@@ -1,5 +1,6 @@
 
 import supabase from './supabaseService';
+import { Database } from '@/integrations/supabase/types';
 import Papa from 'papaparse';
 
 export const parseDate = (dateString: string): Date => {
@@ -23,12 +24,12 @@ export const isDateInRange = (date: Date, from: Date, to: Date): boolean => {
   return date >= from && date <= to;
 };
 
-// Use a string type for table names to simplify typing
-type SupabaseTableName = string;
+// Define the strict type for Supabase table names
+type SupabaseTableName = keyof Database['public']['Tables'];
 
-// Map internal table names to Supabase table names
+// Map internal table names to Supabase table names with strict typing
 const mapInternalToSupabaseTable = (internalName: string): SupabaseTableName => {
-  const tableMapping: Record<string, string> = {
+  const tableMapping: Record<string, SupabaseTableName> = {
     'sdr_meta': 'Meta Pre Venda',
     'closer_meta': 'Meta Closer',
     'empresa_meta': 'Meta Empresa',
@@ -44,17 +45,25 @@ const mapInternalToSupabaseTable = (internalName: string): SupabaseTableName => 
 };
 
 // Map internal table names to appropriate date column for filtering
-const getDateColumnForTable = (tableName: string): string | null => {
-  const dateColumnMapping: Record<string, string> = {
+const getDateColumnForTable = (tableName: SupabaseTableName): string | null => {
+  const dateColumnMapping: Record<SupabaseTableName, string | null> = {
     'Controle Pre Venda': 'Data',
     'Controle Closer': 'Data', 
     'Negociacoes': 'DATA DA CALL',
     'Leadbroker': 'DATA DA COMPRA',
     'Recomendacao': 'DATA DA RECOMENDAÇÃO',
-    'Outbound': 'DATA DO AGENDAMENTO'
+    'Outbound': 'DATA DO AGENDAMENTO',
+    'Meta Pre Venda': null,
+    'Meta Closer': null,
+    'Meta Empresa': null
   };
   
-  return dateColumnMapping[tableName] || null;
+  return dateColumnMapping[tableName];
+};
+
+// Format date to ISO string for Supabase query (YYYY-MM-DD)
+const formatDateForQuery = (date: Date): string => {
+  return date.toISOString().split('T')[0];
 };
 
 // Modified to use Supabase for data sources with server-side date filtering
@@ -74,8 +83,8 @@ export const fetchFilteredData = async (
     
     if (dateColumn) {
       // Format dates to ISO strings (YYYY-MM-DD)
-      const fromDate = dateRange.from.toISOString().split('T')[0];
-      const toDate = dateRange.to.toISOString().split('T')[0];
+      const fromDate = formatDateForQuery(dateRange.from);
+      const toDate = formatDateForQuery(dateRange.to);
       
       query = query
         .gte(dateColumn, fromDate)
