@@ -62,18 +62,18 @@ export const fetchChannelsData = async (dateRange?: DateRange) => {
         return rowMonth === fromMonth && 
                rowYear === fromYear && 
                row.Canal === channel;
-      });
+      }) as MetaEmpresa[];
       
       // Access values with proper type handling for Meta Empresa rows
       let mrrMeta = 0;
       let oneTimeMeta = 0;
       
-      const mrrMetaRow = channelMeta.find((row) => row.Tipo === 'MRR') as MetaEmpresa | undefined;
+      const mrrMetaRow = channelMeta.find((row) => row.Tipo === 'MRR');
       if (mrrMetaRow && mrrMetaRow.Valor !== null) {
         mrrMeta = mrrMetaRow.Valor;
       }
       
-      const oneTimeMetaRow = channelMeta.find((row) => row.Tipo === 'One Time') as MetaEmpresa | undefined;
+      const oneTimeMetaRow = channelMeta.find((row) => row.Tipo === 'One Time');
       if (oneTimeMetaRow && oneTimeMetaRow.Valor !== null) {
         oneTimeMeta = oneTimeMetaRow.Valor;
       }
