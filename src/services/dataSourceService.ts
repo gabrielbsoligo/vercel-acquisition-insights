@@ -23,12 +23,12 @@ export const isDateInRange = (date: Date, from: Date, to: Date): boolean => {
   return date >= from && date <= to;
 };
 
-// Type for valid Supabase tables
-type SupabaseTableName = keyof Database['public']['Tables'];
+// Use a string type for table names to simplify typing
+type SupabaseTableName = string;
 
 // Map internal table names to Supabase table names
 const mapInternalToSupabaseTable = (internalName: string): SupabaseTableName => {
-  const tableMapping: Record<string, SupabaseTableName> = {
+  const tableMapping: Record<string, string> = {
     'sdr_meta': 'Meta Pre Venda',
     'closer_meta': 'Meta Closer',
     'empresa_meta': 'Meta Empresa',
@@ -38,7 +38,7 @@ const mapInternalToSupabaseTable = (internalName: string): SupabaseTableName => 
     'recomendacao': 'Recomendacao',
     'leadbroker': 'Leadbroker',
     'outbound': 'Outbound'
-  } as Record<string, SupabaseTableName>;
+  };
   
   return tableMapping[internalName] || 'Negociacoes';
 };
@@ -66,7 +66,7 @@ export const fetchFilteredData = async (
   try {
     const supabaseTableName = mapInternalToSupabaseTable(internalTableName);
     
-    // Start the query using correct typing
+    // Start the query - simplified to avoid type recursion issues
     let query = supabase.from(supabaseTableName).select('*');
     
     // Add date range filters if applicable
