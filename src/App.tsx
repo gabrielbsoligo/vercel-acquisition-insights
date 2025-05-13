@@ -10,6 +10,7 @@ import SdrPage from "./pages/acquisition/SdrPage";
 import CloserPage from "./pages/acquisition/CloserPage";
 import ChannelsPage from "./pages/acquisition/ChannelsPage";
 import LeadBrokerPage from "./pages/acquisition/LeadBrokerPage";
+import SdrControlForm from "./pages/acquisition/SdrControlForm";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/acquisition/closer" element={<CloserPage />} />
           <Route path="/acquisition/channels" element={<ChannelsPage />} />
           <Route path="/acquisition/leadbroker" element={<LeadBrokerPage />} />
+          <Route path="/acquisition/sdrcontrol" element={<SdrControlForm />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
