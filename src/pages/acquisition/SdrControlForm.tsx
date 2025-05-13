@@ -80,9 +80,24 @@ const SdrControlForm = () => {
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
-      // Convert data to the format expected by the service
+      // Convert form values to the format expected by the service
       const formData: SdrControlFormData = {
-        ...data
+        Data: data.Data,
+        SDR: data.SDR,
+        "Empresas Ativadas": data["Empresas Ativadas"] || 0,
+        "Ligações Realizadas": data["Ligações Realizadas"] || 0,
+        "Ligações Atendidas": data["Ligações Atendidas"] || 0,
+        "Marcadas Out": data["Marcadas Out"] || 0,
+        "Marcadas Recom": data["Marcadas Recom"] || 0,
+        "Marcadas Inbound": data["Marcadas Inbound"] || 0,
+        "Show Out": data["Show Out"] || 0,
+        "Show Recom": data["Show Recom"] || 0,
+        "Show Inbound": data["Show Inbound"] || 0,
+        "Noshow": data["Noshow"] || 0,
+        "Remarcadas": data["Remarcadas"] || 0,
+        "Recomendações Coletadas": data["Recomendações Coletadas"] || 0,
+        "Novas Conexões Stakeholder": data["Novas Conexões Stakeholder"] || 0,
+        "Tempo": data["Tempo"] || 0
       };
       
       const success = await insertSdrControlData(formData);
