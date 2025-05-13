@@ -1,44 +1,56 @@
+import { supabase } from "@/supabase";
 
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { Database } from "@/integrations/supabase/types";
-
-export type SdrControlFormData = {
+// Define a type for the data structure
+export type SDRControlEntry = {
+  ID: number;
   Data: string;
   SDR: string;
-  "Empresas Ativadas": number;
-  "Ligações Atendidas": number;
-  "Ligações Realizadas": number;
-  "Marcadas Inbound": number;
-  "Marcadas Out": number;
-  "Marcadas Recom": number;
-  Noshow: number;
-  "Novas Conexões Stakeholder": number;
-  "Recomendações Coletadas": number;
-  Remarcadas: number;
-  "Show Inbound": number;
-  "Show Out": number;
-  "Show Recom": number;
-  Tempo: number;
+  Show: number | null;
+  NoShow: number | null;
+  Reunião: number | null;
+  Oportunidade: number | null;
+  Proposta: number | null;
+  Venda: number | null;
+  MRR: number | null;
+  "Data da Venda": string | null;
+  Observações: string | null;
 };
 
-export async function insertSdrControlData(formData: SdrControlFormData): Promise<boolean> {
+export const fetchEntries = async (): Promise<SDRControlEntry[]> => {
   try {
-    // Convert empty string inputs to null values
-    const cleanedData = Object.entries(formData).reduce((acc, [key, value]) => {
-      acc[key] = value === "" ? null : value;
-      return acc;
-    }, {} as Record<string, any>);
-    
-    // Convert time value to seconds if needed
-    if (typeof cleanedData.Tempo === 'string') {
-      const timeMatch = (cleanedData.Tempo as string).match(/^(\d+):(\d+):(\d+)$/);
-      if (timeMatch) {
-        const hours = parseInt(timeMatch[1]);
-        const minutes = parseInt(timeMatch[2]);
-        const seconds = parseInt(timeMatch[3]);
-        cleanedData.Tempo = hours * 3600 + minutes * 60 + seconds;
+    const { data, error } = await supabase
+      .from('Controle Pre Venda')
+      .select('*')
+      .order('Data', { ascending: false });
+
+    if (error) {
+      console.error("Error fetching data:", error);
+      throw new Error(error.message);
+    }
+
+    return data as SDRControlEntry[];
+  } catch (error) {
+    console.error("Error fetching entries:", error);
+    throw error;
+  }
+};
+
+export const createEntry = async (data: Record<string, any>) => {
+  try {
+    // Initialize parsed values object
+    const cleanedData: Record<string, any> = {};
+
+    // Map form field names to database column names
+    for (const [key, value] of Object.entries(data)) {
+      let parsedValue: any = value;
+
+      // Sanitize and convert numeric values
+      if (key === 'Show' || key === 'NoShow' || key === 'Reunião' || key === 'Oportunidade' || key === 'Proposta' || key === 'Venda' || key === 'MRR') {
+        parsedValue = value !== '' ? parseInt(value, 10) : null; // or 0, depending on your needs
       }
+
+      // Assign the parsed value to the cleaned data object
+      cleanedData[key] = parsedValue;
     }
     
     // Get the next ID from the table for auto-incrementing
@@ -52,49 +64,62 @@ export async function insertSdrControlData(formData: SdrControlFormData): Promis
     const nextId = maxIdData && maxIdData.length > 0 ? maxIdData[0].ID + 1 : 1;
     
     // Add the ID field to the data being inserted
-    cleanedData.ID = nextId;
+    // TypeScript needs this explicit type assertion to satisfy the "ID is required" constraint
+    const finalData = {
+      ...cleanedData,
+      ID: nextId
+    };
     
     const { error } = await supabase
       .from('Controle Pre Venda')
-      .insert(cleanedData);
-    
-    if (error) {
-      console.error("Error inserting data:", error);
-      toast.error("Erro ao salvar dados: " + error.message);
-      return false;
-    }
-    
-    toast.success("Dados salvos com sucesso!");
-    return true;
-  } catch (error: any) {
-    console.error("Error in insertSdrControlData:", error);
-    toast.error("Erro ao processar dados: " + error.message);
-    return false;
-  }
-}
+      .insert(finalData);
 
-// Function to fetch SDR names for dropdown
-export async function fetchSdrNames(): Promise<string[]> {
-  try {
-    const { data, error } = await supabase
-      .from('Controle Pre Venda')
-      .select('SDR')
-      .not('SDR', 'is', null);
-    
     if (error) {
-      console.error("Error fetching SDR names:", error);
-      return [];
+      console.error('Error inserting data:', error);
+      throw new Error(error.message);
     }
-    
-    // Extract unique SDR names
-    const sdrNames = new Set<string>();
-    data?.forEach(row => {
-      if (row.SDR) sdrNames.add(row.SDR);
-    });
-    
-    return Array.from(sdrNames);
+
+    return true;
   } catch (error) {
-    console.error("Error in fetchSdrNames:", error);
-    return [];
+    console.error('Error creating entry:', error);
+    throw error;
   }
-}
+};
+
+export const updateEntry = async (id: number, updates: Record<string, any>): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('Controle Pre Venda')
+      .update(updates)
+      .eq('ID', id);
+
+    if (error) {
+      console.error("Error updating data:", error);
+      throw new Error(error.message);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error updating entry:", error);
+    throw error;
+  }
+};
+
+export const deleteEntry = async (id: number): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('Controle Pre Venda')
+      .delete()
+      .eq('ID', id);
+
+    if (error) {
+      console.error("Error deleting data:", error);
+      throw new Error(error.message);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error deleting entry:", error);
+    throw error;
+  }
+};
