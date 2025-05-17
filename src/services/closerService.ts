@@ -193,7 +193,7 @@ export const fetchCloserKpiData = async (
   }
 };
 
-// Fetch closer performance data for charts - supports single date range now
+// Fetch closer performance data for charts - Using only DATA DA CALL for filtering
 export const fetchCloserPerformanceData = async (
   dateRange?: DateRange,
   selectedCloser?: string,
@@ -214,7 +214,7 @@ export const fetchCloserPerformanceData = async (
     
     console.log(`Fetched ${closerPerformanceData.length} rows from closer_performance`);
     
-    // Fetch negotiations data
+    // Fetch negotiations data - using 'DATA DA CALL' for filtering
     const negociacoesData = await fetchFilteredData(
       'negociacoes', 
       normalizedDateRange,
@@ -354,8 +354,7 @@ export const fetchCloserPerformanceData = async (
   }
 };
 
-// Functions for sales funnel data, loss reasons data, and sales cycle data
-// Updated to use a single date range
+// Function for sales funnel data - only using DATA DA CALL for filtering
 export const fetchCloserSalesFunnelData = async (
   dateRange?: DateRange,
   selectedCloser?: string,
@@ -410,6 +409,7 @@ export const fetchCloserSalesFunnelData = async (
   }
 };
 
+// Function for loss reasons data - only using DATA DA CALL for filtering
 export const fetchCloserLossReasonsData = async (
   dateRange?: DateRange,
   selectedCloser?: string,
@@ -465,6 +465,7 @@ export const fetchCloserLossReasonsData = async (
   }
 };
 
+// Function for sales cycle data - only using DATA DA CALL for filtering
 export const fetchCloserSalesCycleData = async (
   dateRange?: DateRange,
   selectedCloser?: string,
