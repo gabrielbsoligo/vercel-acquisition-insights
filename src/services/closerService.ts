@@ -1,11 +1,13 @@
 import { DateRange } from "react-day-picker";
-import { 
-  fetchFilteredData,
-  parseDate,
-  fetchCloserMetaData
-} from "./dataSourceService";
+import { fetchFilteredData } from "./queryService";
 import { normalizeDateRange } from "./utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
+import { 
+  fetchSdrMetaData,
+  fetchCloserMetaData,
+  fetchEmpresaMetaData
+} from './metaService';
+import { parseDate, isDateInRange } from './utils/dateUtils';
 
 // Fetch closer KPI data using Negociacoes table as primary source
 export const fetchCloserKpiData = async (
@@ -18,7 +20,7 @@ export const fetchCloserKpiData = async (
     const normalizedDateRange = normalizeDateRange(dateRange);
     console.log('Normalized date range:', normalizedDateRange);
     
-    // Fetch Negociacoes data for sales metrics
+    // Fetch Negociacoes data for sales metrics - explicitly use 'DATA DA CALL'
     const negociacoesData = await fetchFilteredData(
       'negociacoes', 
       normalizedDateRange,
@@ -190,7 +192,7 @@ export const fetchCloserKpiData = async (
   }
 };
 
-// Fetch closer performance data for charts
+// Fetch closer performance data for charts - supports both date ranges
 export const fetchCloserPerformanceData = async (
   dateRangeStart?: DateRange, 
   dateRangeEnd?: DateRange,
@@ -198,11 +200,18 @@ export const fetchCloserPerformanceData = async (
   selectedOrigin?: string
 ) => {
   try {
+    // Ensure we have valid date ranges
     const normalizedDateRangeStart = normalizeDateRange(dateRangeStart);
     const normalizedDateRangeEnd = dateRangeEnd ? normalizeDateRange(dateRangeEnd) : normalizedDateRangeStart;
     
-    console.log('Normalized date range start:', normalizedDateRangeStart);
-    console.log('Normalized date range end:', normalizedDateRangeEnd);
+    console.log('Performance data - Normalized date ranges:', {
+      start: normalizedDateRangeStart,
+      end: normalizedDateRangeEnd
+    });
+    
+    // Flag to check if both date ranges are the same
+    const isSameDateRange = JSON.stringify(normalizedDateRangeStart) === JSON.stringify(normalizedDateRangeEnd);
+    console.log('Both date ranges are the same:', isSameDateRange);
     
     // Fetch Controle Closer data for meetings
     const closerPerformanceData = await fetchFilteredData(
@@ -211,49 +220,46 @@ export const fetchCloserPerformanceData = async (
       selectedCloser && selectedCloser !== 'all' ? { Closer: selectedCloser } : undefined
     );
     
-    // Fetch Negociacoes data for sales with start date range (DATA DA CALL)
-    let negociacoesStartData = await fetchFilteredData(
+    console.log(`Fetched ${closerPerformanceData.length} rows from closer_performance`);
+    
+    // First query: Get negotiations that started in dateRangeStart
+    const negociacoesStartData = await fetchFilteredData(
       'negociacoes', 
       normalizedDateRangeStart,
       selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined,
-      'start'
+      'start' // Use 'DATA DA CALL' for filtering
     );
     
-    // If dateRangeEnd is different, also fetch with end date range (DATA DO FEC.)
-    let negociacoesEndData: any[] = [];
-    if (dateRangeEnd && JSON.stringify(dateRangeEnd) !== JSON.stringify(dateRangeStart)) {
-      negociacoesEndData = await fetchFilteredData(
+    console.log(`Fetched ${negociacoesStartData.length} rows from negociacoes with start date filter`);
+    
+    let combinedNegociacoes = [...negociacoesStartData];
+    
+    // Second query (only if date ranges are different): Get negotiations that ended in dateRangeEnd
+    if (!isSameDateRange) {
+      console.log("Fetching additional negotiations with end date filter");
+      const negociacoesEndData = await fetchFilteredData(
         'negociacoes', 
         normalizedDateRangeEnd,
         selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined,
-        'end'
+        'end' // Use 'DATA DO FEC.' for filtering
       );
       
-      // Combine unique entries from both queries
-      const allIds = new Set();
-      const combinedData: any[] = [];
+      console.log(`Fetched ${negociacoesEndData.length} rows from negociacoes with end date filter`);
       
-      // First add all entries from start date query
-      negociacoesStartData.forEach(row => {
-        allIds.add(row.ID);
-        combinedData.push(row);
-      });
+      // De-duplicate based on ID
+      const existingIds = new Set(negociacoesStartData.map(item => item.ID));
+      const uniqueEndData = negociacoesEndData.filter(item => !existingIds.has(item.ID));
       
-      // Then add entries from end date query that aren't already included
-      negociacoesEndData.forEach(row => {
-        if (!allIds.has(row.ID)) {
-          combinedData.push(row);
-        }
-      });
+      console.log(`Found ${uniqueEndData.length} unique records in end date data`);
       
-      negociacoesStartData = combinedData;
+      // Combine all unique records
+      combinedNegociacoes = [...negociacoesStartData, ...uniqueEndData];
+      
+      console.log(`Combined negotiations data now contains ${combinedNegociacoes.length} records`);
     }
     
-    console.log(`Fetched ${closerPerformanceData.length} rows from closer_performance`);
-    console.log(`Fetched ${negociacoesStartData.length} rows from negociacoes`);
-    
     // Apply origin filter if selected
-    let negociacoesData = negociacoesStartData;
+    let negociacoesData = combinedNegociacoes;
     if (selectedOrigin && selectedOrigin !== 'all') {
       negociacoesData = negociacoesData.filter((row: any) => row.ORIGEM === selectedOrigin);
       console.log(`Applied origin filter. Remaining rows: ${negociacoesData.length}`);
@@ -382,7 +388,8 @@ export const fetchCloserPerformanceData = async (
   }
 };
 
-// New function for sales funnel data
+// Functions for sales funnel data, loss reasons data, and sales cycle data
+// These follow the same pattern of using both date ranges and improving logging
 export const fetchCloserSalesFunnelData = async (
   dateRangeStart?: DateRange,
   dateRangeEnd?: DateRange,
@@ -471,7 +478,6 @@ export const fetchCloserSalesFunnelData = async (
   }
 };
 
-// New function for loss reasons data
 export const fetchCloserLossReasonsData = async (
   dateRangeStart?: DateRange,
   dateRangeEnd?: DateRange,
@@ -560,7 +566,6 @@ export const fetchCloserLossReasonsData = async (
   }
 };
 
-// New function for sales cycle data
 export const fetchCloserSalesCycleData = async (
   dateRangeStart?: DateRange,
   dateRangeEnd?: DateRange,

@@ -1,3 +1,4 @@
+
 import { DateRange } from "react-day-picker";
 
 // Helper function to ensure DateRange has proper values
@@ -17,6 +18,11 @@ export const normalizeDateRange = (dateRange?: DateRange): { from: Date; to: Dat
   // If 'to' is missing, use the current date
   const to = dateRange.to || new Date();
   
+  // Handle case where from is after to
+  if (from > to) {
+    return { from: to, to: from };
+  }
+  
   return { from, to };
 };
 
@@ -30,6 +36,7 @@ export const parseDate = (dateString: string): Date => {
   const parts = dateString.split(/[\/\-]/);
   
   if (parts.length !== 3) {
+    console.warn(`Invalid date format: ${dateString}`);
     return new Date(); // Return current date if format is invalid
   }
   
@@ -59,5 +66,16 @@ export const isDateInRange = (date: Date, from: Date, to: Date): boolean => {
  * @returns ISO date string
  */
 export const formatDateForQuery = (date: Date): string => {
-  return date.toISOString().split('T')[0];
+  // Ensure we're working with a valid date
+  if (!(date instanceof Date) || isNaN(date.getTime())) {
+    console.error("Invalid date provided to formatDateForQuery:", date);
+    return new Date().toISOString().split('T')[0];
+  }
+  
+  // Format to YYYY-MM-DD
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
 };

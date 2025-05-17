@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { DateRange } from "react-day-picker";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -143,25 +144,54 @@ const CloserPage: React.FC = () => {
       try {
         setIsLoading(true);
         
+        // Ensure we have valid date ranges for fetching
+        const validDateRangeStart = dateRangeStart || getDefaultDateRange();
+        const validDateRangeEnd = dateRangeEnd || getDefaultDateRange();
+        
+        console.log("Fetching with date ranges:", {
+          start: JSON.stringify(validDateRangeStart),
+          end: JSON.stringify(validDateRangeEnd)
+        });
+        
         // Load KPI data - using dateRangeStart
-        const reunioes = await fetchCloserKpiData('reunioesRealizadas', dateRangeStart, selectedCloser);
-        const vendas = await fetchCloserKpiData('vendas', dateRangeStart, selectedCloser);
-        const valorVendido = await fetchCloserKpiData('valorVendido', dateRangeStart, selectedCloser);
-        const ticketMedio = await fetchCloserKpiData('ticketMedio', dateRangeStart, selectedCloser);
-        const taxaConversao = await fetchCloserKpiData('taxaConversao', dateRangeStart, selectedCloser);
-        const cicloVendas = await fetchCloserKpiData('cicloVendas', dateRangeStart, selectedCloser);
+        const reunioes = await fetchCloserKpiData('reunioesRealizadas', validDateRangeStart, selectedCloser);
+        const vendas = await fetchCloserKpiData('vendas', validDateRangeStart, selectedCloser);
+        const valorVendido = await fetchCloserKpiData('valorVendido', validDateRangeStart, selectedCloser);
+        const ticketMedio = await fetchCloserKpiData('ticketMedio', validDateRangeStart, selectedCloser);
+        const taxaConversao = await fetchCloserKpiData('taxaConversao', validDateRangeStart, selectedCloser);
+        const cicloVendas = await fetchCloserKpiData('cicloVendas', validDateRangeStart, selectedCloser);
         
         // Load performance data - using both date ranges
-        const performance = await fetchCloserPerformanceData(dateRangeStart, dateRangeEnd, selectedCloser, selectedOrigin);
+        const performance = await fetchCloserPerformanceData(
+          validDateRangeStart, 
+          validDateRangeEnd, 
+          selectedCloser, 
+          selectedOrigin
+        );
         
         // Load sales funnel data - using both date ranges
-        const funnel = await fetchCloserSalesFunnelData(dateRangeStart, dateRangeEnd, selectedCloser, selectedOrigin);
+        const funnel = await fetchCloserSalesFunnelData(
+          validDateRangeStart, 
+          validDateRangeEnd, 
+          selectedCloser, 
+          selectedOrigin
+        );
         
         // Load sales cycle data - using both date ranges
-        const cycleData = await fetchCloserSalesCycleData(dateRangeStart, dateRangeEnd, selectedCloser, selectedOrigin);
+        const cycleData = await fetchCloserSalesCycleData(
+          validDateRangeStart, 
+          validDateRangeEnd, 
+          selectedCloser, 
+          selectedOrigin
+        );
         
         // Load loss reasons data - using both date ranges
-        const lossReasons = await fetchCloserLossReasonsData(dateRangeStart, dateRangeEnd, selectedCloser, selectedOrigin);
+        const lossReasons = await fetchCloserLossReasonsData(
+          validDateRangeStart, 
+          validDateRangeEnd, 
+          selectedCloser, 
+          selectedOrigin
+        );
         
         // Find perdas value from performance data (total team)
         const perdas = performance.find(item => item.closerName === 'Total Equipe')?.negociosPerdidos || 0;
