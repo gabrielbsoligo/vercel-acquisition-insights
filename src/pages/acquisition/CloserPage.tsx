@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { DateRange } from "react-day-picker";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -99,8 +98,7 @@ const getDefaultDateRange = (): DateRange => {
 
 const CloserPage: React.FC = () => {
   // Set default date range to cover all data (Jul 2024 - May 2025)
-  const [dateRangeStart, setDateRangeStart] = useState<DateRange | undefined>(getDefaultDateRange());
-  const [dateRangeEnd, setDateRangeEnd] = useState<DateRange | undefined>(getDefaultDateRange());
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(getDefaultDateRange());
   
   const [selectedCloser, setSelectedCloser] = useState<string>("all");
   const [selectedOrigin, setSelectedOrigin] = useState<string>("all");
@@ -131,8 +129,7 @@ const CloserPage: React.FC = () => {
 
   // Function to reset filters
   const resetFilters = () => {
-    setDateRangeStart(getDefaultDateRange());
-    setDateRangeEnd(getDefaultDateRange());
+    setDateRange(getDefaultDateRange());
     setSelectedCloser("all");
     setSelectedOrigin("all");
     toast.success("Filtros redefinidos para valores padrão");
@@ -144,51 +141,45 @@ const CloserPage: React.FC = () => {
       try {
         setIsLoading(true);
         
-        // Ensure we have valid date ranges for fetching
-        const validDateRangeStart = dateRangeStart || getDefaultDateRange();
-        const validDateRangeEnd = dateRangeEnd || getDefaultDateRange();
+        // Ensure we have valid date range for fetching
+        const validDateRange = dateRange || getDefaultDateRange();
         
-        console.log("Fetching with date ranges:", {
-          start: JSON.stringify(validDateRangeStart),
-          end: JSON.stringify(validDateRangeEnd)
+        console.log("Fetching with date range:", {
+          range: JSON.stringify(validDateRange)
         });
         
-        // Load KPI data - using dateRangeStart
-        const reunioes = await fetchCloserKpiData('reunioesRealizadas', validDateRangeStart, selectedCloser);
-        const vendas = await fetchCloserKpiData('vendas', validDateRangeStart, selectedCloser);
-        const valorVendido = await fetchCloserKpiData('valorVendido', validDateRangeStart, selectedCloser);
-        const ticketMedio = await fetchCloserKpiData('ticketMedio', validDateRangeStart, selectedCloser);
-        const taxaConversao = await fetchCloserKpiData('taxaConversao', validDateRangeStart, selectedCloser);
-        const cicloVendas = await fetchCloserKpiData('cicloVendas', validDateRangeStart, selectedCloser);
+        // Load KPI data
+        const reunioes = await fetchCloserKpiData('reunioesRealizadas', validDateRange, selectedCloser);
+        const vendas = await fetchCloserKpiData('vendas', validDateRange, selectedCloser);
+        const valorVendido = await fetchCloserKpiData('valorVendido', validDateRange, selectedCloser);
+        const ticketMedio = await fetchCloserKpiData('ticketMedio', validDateRange, selectedCloser);
+        const taxaConversao = await fetchCloserKpiData('taxaConversao', validDateRange, selectedCloser);
+        const cicloVendas = await fetchCloserKpiData('cicloVendas', validDateRange, selectedCloser);
         
-        // Load performance data - using both date ranges
+        // Load performance data
         const performance = await fetchCloserPerformanceData(
-          validDateRangeStart, 
-          validDateRangeEnd, 
+          validDateRange, 
           selectedCloser, 
           selectedOrigin
         );
         
-        // Load sales funnel data - using both date ranges
+        // Load sales funnel data
         const funnel = await fetchCloserSalesFunnelData(
-          validDateRangeStart, 
-          validDateRangeEnd, 
+          validDateRange, 
           selectedCloser, 
           selectedOrigin
         );
         
-        // Load sales cycle data - using both date ranges
+        // Load sales cycle data
         const cycleData = await fetchCloserSalesCycleData(
-          validDateRangeStart, 
-          validDateRangeEnd, 
+          validDateRange, 
           selectedCloser, 
           selectedOrigin
         );
         
-        // Load loss reasons data - using both date ranges
+        // Load loss reasons data
         const lossReasons = await fetchCloserLossReasonsData(
-          validDateRangeStart, 
-          validDateRangeEnd, 
+          validDateRange, 
           selectedCloser, 
           selectedOrigin
         );
@@ -231,7 +222,7 @@ const CloserPage: React.FC = () => {
     };
 
     loadData();
-  }, [dateRangeStart, dateRangeEnd, selectedCloser, selectedOrigin, selectedMonth]);
+  }, [dateRange, selectedCloser, selectedOrigin, selectedMonth]);
   
   // Generate sales progress data based on selected month
   const generateSalesProgressData = () => {
@@ -303,16 +294,11 @@ const CloserPage: React.FC = () => {
   return (
     <DashboardLayout title="Performance de Vendas (Closer)">
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-2">
         <DateRangePicker
-          dateRange={dateRangeStart}
-          onDateRangeChange={setDateRangeStart}
-          label="Período Início Call"
-        />
-        <DateRangePicker
-          dateRange={dateRangeEnd}
-          onDateRangeChange={setDateRangeEnd}
-          label="Período Fechamento"
+          dateRange={dateRange}
+          onDateRangeChange={setDateRange}
+          label="Período"
         />
         <div className="grid gap-2">
           <div className="text-sm font-medium">Closer</div>
