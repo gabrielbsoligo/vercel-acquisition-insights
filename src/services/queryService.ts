@@ -8,12 +8,14 @@ import { formatDateForQuery } from './utils/dateUtils';
  * @param internalTableName The internal table name used in the application
  * @param dateRange The date range to filter by
  * @param additionalFilters Additional filters to apply
+ * @param dateType Optional parameter to specify which date column to use (start, end, or default)
  * @returns The filtered data as array
  */
 export const fetchFilteredData = async (
   internalTableName: string,
   dateRange: { from: Date, to: Date },
-  additionalFilters?: Record<string, any>
+  additionalFilters?: Record<string, any>,
+  dateType?: 'start' | 'end'
 ): Promise<any[]> => {
   try {
     const supabaseTableName = mapInternalToSupabaseTable(internalTableName);
@@ -24,10 +26,10 @@ export const fetchFilteredData = async (
       .select('*');
     
     // Add date range filters on the server side
-    const dateColumn = getDateColumnForTable(supabaseTableName);
+    const dateColumn = getDateColumnForTable(supabaseTableName, dateType);
     
     console.log(`Fetching data from table: ${supabaseTableName}`);
-    console.log(`Date column: ${dateColumn}`);
+    console.log(`Using date column: ${dateColumn || 'No date column'} (type: ${dateType || 'default'})`);
     console.log(`Date range: ${dateRange.from.toISOString()} to ${dateRange.to.toISOString()}`);
     
     if (dateColumn) {
@@ -36,6 +38,7 @@ export const fetchFilteredData = async (
       const toDate = formatDateForQuery(dateRange.to);
       
       console.log(`Formatted date range for query: ${fromDate} to ${toDate}`);
+      console.log(`SQL filter will be: ${dateColumn} >= '${fromDate}' AND ${dateColumn} <= '${toDate}'`);
       
       query = query
         .gte(dateColumn, fromDate)

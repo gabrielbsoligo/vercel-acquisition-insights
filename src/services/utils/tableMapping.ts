@@ -31,12 +31,17 @@ export const mapInternalToSupabaseTable = (internalName: string): SupabaseTableN
 };
 
 /**
- * Gets the appropriate date column for a specific table
+ * Gets the appropriate date column for a specific table and date type
  * @param tableName The Supabase table name
+ * @param dateType Optional parameter to specify which date column to use (start, end, or default)
  * @returns The date column for filtering or null if none
  */
-export const getDateColumnForTable = (tableName: SupabaseTableName): string | null => {
-  const dateColumnMapping: Record<SupabaseTableName, string | null> = {
+export const getDateColumnForTable = (
+  tableName: SupabaseTableName, 
+  dateType?: 'start' | 'end'
+): string | null => {
+  // Date columns for start dates (default)
+  const startDateColumnMapping: Record<SupabaseTableName, string | null> = {
     'Controle Pre Venda': 'Data',
     'Controle Closer': 'Data', 
     'Negociacoes': 'DATA DA CALL',
@@ -48,5 +53,18 @@ export const getDateColumnForTable = (tableName: SupabaseTableName): string | nu
     'Meta Empresa': 'Mês'
   };
   
-  return dateColumnMapping[tableName];
+  // Date columns for end dates
+  const endDateColumnMapping: Record<SupabaseTableName, string | null> = {
+    'Controle Pre Venda': null,
+    'Controle Closer': null, 
+    'Negociacoes': 'DATA DO FEC.',
+    'Leadbroker': null,
+    'Recomendacao': null,
+    'Outbound': null,
+    'Meta Pre Venda': null,
+    'Meta Closer': null,
+    'Meta Empresa': null
+  };
+  
+  return dateType === 'end' ? endDateColumnMapping[tableName] : startDateColumnMapping[tableName];
 };

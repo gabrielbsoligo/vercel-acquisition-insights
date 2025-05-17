@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { DateRange } from "react-day-picker";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -40,6 +39,7 @@ import {
   BadgeDollarSign,
   Percent,
   CalendarClock,
+  XCircle,
 } from "lucide-react";
 import {
   fetchCloserKpiData,
@@ -47,9 +47,11 @@ import {
   fetchCloserSalesFunnelData,
   fetchCloserLossReasonsData,
   fetchCloserSalesCycleData
-} from "@/services/dataService";
+} from "@/services/closerService";
 import { LoadingState } from "@/components/lead-broker/LoadingState";
 import { NoDataState } from "@/components/lead-broker/NoDataState";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 // Define types for data structures
 interface KpiData {
@@ -86,17 +88,18 @@ interface CycleSalesData {
   quantidade: number;
 }
 
+// Get default date range (Jul 2024 - May 2025)
+const getDefaultDateRange = (): DateRange => {
+  return {
+    from: new Date(2024, 6, 1), // July 1, 2024
+    to: new Date(2025, 4, 31),  // May 31, 2025
+  };
+};
+
 const CloserPage: React.FC = () => {
   // Set default date range to cover all data (Jul 2024 - May 2025)
-  const [dateRangeStart, setDateRangeStart] = useState<DateRange | undefined>({
-    from: new Date(2024, 6, 1), // July 1, 2024
-    to: new Date(2025, 4, 31), // May 31, 2025
-  });
-  
-  const [dateRangeEnd, setDateRangeEnd] = useState<DateRange | undefined>({
-    from: new Date(2024, 6, 1), // July 1, 2024
-    to: new Date(2025, 4, 31), // May 31, 2025
-  });
+  const [dateRangeStart, setDateRangeStart] = useState<DateRange | undefined>(getDefaultDateRange());
+  const [dateRangeEnd, setDateRangeEnd] = useState<DateRange | undefined>(getDefaultDateRange());
   
   const [selectedCloser, setSelectedCloser] = useState<string>("all");
   const [selectedOrigin, setSelectedOrigin] = useState<string>("all");
@@ -125,13 +128,22 @@ const CloserPage: React.FC = () => {
   // Chart colors
   const COLORS = ['#e50915', '#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
+  // Function to reset filters
+  const resetFilters = () => {
+    setDateRangeStart(getDefaultDateRange());
+    setDateRangeEnd(getDefaultDateRange());
+    setSelectedCloser("all");
+    setSelectedOrigin("all");
+    toast.success("Filtros redefinidos para valores padrão");
+  };
+
   // Load all data when filters change
   useEffect(() => {
     const loadData = async () => {
       try {
         setIsLoading(true);
         
-        // Load KPI data
+        // Load KPI data - using dateRangeStart
         const reunioes = await fetchCloserKpiData('reunioesRealizadas', dateRangeStart, selectedCloser);
         const vendas = await fetchCloserKpiData('vendas', dateRangeStart, selectedCloser);
         const valorVendido = await fetchCloserKpiData('valorVendido', dateRangeStart, selectedCloser);
@@ -139,17 +151,17 @@ const CloserPage: React.FC = () => {
         const taxaConversao = await fetchCloserKpiData('taxaConversao', dateRangeStart, selectedCloser);
         const cicloVendas = await fetchCloserKpiData('cicloVendas', dateRangeStart, selectedCloser);
         
-        // Load performance data
-        const performance = await fetchCloserPerformanceData(dateRangeStart, selectedCloser, selectedOrigin);
+        // Load performance data - using both date ranges
+        const performance = await fetchCloserPerformanceData(dateRangeStart, dateRangeEnd, selectedCloser, selectedOrigin);
         
-        // Load sales funnel data
-        const funnel = await fetchCloserSalesFunnelData(dateRangeStart, selectedCloser, selectedOrigin);
+        // Load sales funnel data - using both date ranges
+        const funnel = await fetchCloserSalesFunnelData(dateRangeStart, dateRangeEnd, selectedCloser, selectedOrigin);
         
-        // Load sales cycle data
-        const cycleData = await fetchCloserSalesCycleData(dateRangeStart, selectedCloser, selectedOrigin);
+        // Load sales cycle data - using both date ranges
+        const cycleData = await fetchCloserSalesCycleData(dateRangeStart, dateRangeEnd, selectedCloser, selectedOrigin);
         
-        // Load loss reasons data
-        const lossReasons = await fetchCloserLossReasonsData(dateRangeStart, selectedCloser, selectedOrigin);
+        // Load loss reasons data - using both date ranges
+        const lossReasons = await fetchCloserLossReasonsData(dateRangeStart, dateRangeEnd, selectedCloser, selectedOrigin);
         
         // Find perdas value from performance data (total team)
         const perdas = performance.find(item => item.closerName === 'Total Equipe')?.negociosPerdidos || 0;
@@ -182,6 +194,7 @@ const CloserPage: React.FC = () => {
         setIsLoading(false);
       } catch (error) {
         console.error("Error loading data:", error);
+        toast.error("Erro ao carregar dados. Verifique os filtros ou tente novamente.");
         setIsLoading(false);
         setHasData(false);
       }
@@ -260,7 +273,7 @@ const CloserPage: React.FC = () => {
   return (
     <DashboardLayout title="Performance de Vendas (Closer)">
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-2">
         <DateRangePicker
           dateRange={dateRangeStart}
           onDateRangeChange={setDateRangeStart}
@@ -308,6 +321,19 @@ const CloserPage: React.FC = () => {
             </SelectContent>
           </Select>
         </div>
+      </div>
+      
+      {/* Clear Filters Button */}
+      <div className="flex justify-end mb-4">
+        <Button 
+          onClick={resetFilters} 
+          variant="outline" 
+          size="sm" 
+          className="flex items-center gap-1"
+        >
+          <XCircle className="h-4 w-4" />
+          Limpar Filtros
+        </Button>
       </div>
 
       {isLoading ? (

@@ -1,4 +1,3 @@
-
 import { DateRange } from "react-day-picker";
 import { 
   fetchFilteredData,
@@ -23,7 +22,8 @@ export const fetchCloserKpiData = async (
     const negociacoesData = await fetchFilteredData(
       'negociacoes', 
       normalizedDateRange,
-      selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined
+      selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined,
+      'start' // Explicitly use 'start' date column (DATA DA CALL)
     );
     
     console.log(`Fetched ${negociacoesData.length} rows from negociacoes`);
@@ -192,30 +192,71 @@ export const fetchCloserKpiData = async (
 
 // Fetch closer performance data for charts
 export const fetchCloserPerformanceData = async (
-  dateRange?: DateRange, 
+  dateRangeStart?: DateRange, 
+  dateRangeEnd?: DateRange,
   selectedCloser?: string,
   selectedOrigin?: string
 ) => {
   try {
-    const normalizedDateRange = normalizeDateRange(dateRange);
+    const normalizedDateRangeStart = normalizeDateRange(dateRangeStart);
+    const normalizedDateRangeEnd = dateRangeEnd ? normalizeDateRange(dateRangeEnd) : normalizedDateRangeStart;
+    
+    console.log('Normalized date range start:', normalizedDateRangeStart);
+    console.log('Normalized date range end:', normalizedDateRangeEnd);
     
     // Fetch Controle Closer data for meetings
     const closerPerformanceData = await fetchFilteredData(
       'closer_performance', 
-      normalizedDateRange,
+      normalizedDateRangeStart,
       selectedCloser && selectedCloser !== 'all' ? { Closer: selectedCloser } : undefined
     );
     
-    // Fetch Negociacoes data for sales
-    let negociacoesData = await fetchFilteredData(
+    // Fetch Negociacoes data for sales with start date range (DATA DA CALL)
+    let negociacoesStartData = await fetchFilteredData(
       'negociacoes', 
-      normalizedDateRange,
-      selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined
+      normalizedDateRangeStart,
+      selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined,
+      'start'
     );
     
+    // If dateRangeEnd is different, also fetch with end date range (DATA DO FEC.)
+    let negociacoesEndData: any[] = [];
+    if (dateRangeEnd && JSON.stringify(dateRangeEnd) !== JSON.stringify(dateRangeStart)) {
+      negociacoesEndData = await fetchFilteredData(
+        'negociacoes', 
+        normalizedDateRangeEnd,
+        selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined,
+        'end'
+      );
+      
+      // Combine unique entries from both queries
+      const allIds = new Set();
+      const combinedData: any[] = [];
+      
+      // First add all entries from start date query
+      negociacoesStartData.forEach(row => {
+        allIds.add(row.ID);
+        combinedData.push(row);
+      });
+      
+      // Then add entries from end date query that aren't already included
+      negociacoesEndData.forEach(row => {
+        if (!allIds.has(row.ID)) {
+          combinedData.push(row);
+        }
+      });
+      
+      negociacoesStartData = combinedData;
+    }
+    
+    console.log(`Fetched ${closerPerformanceData.length} rows from closer_performance`);
+    console.log(`Fetched ${negociacoesStartData.length} rows from negociacoes`);
+    
     // Apply origin filter if selected
+    let negociacoesData = negociacoesStartData;
     if (selectedOrigin && selectedOrigin !== 'all') {
       negociacoesData = negociacoesData.filter((row: any) => row.ORIGEM === selectedOrigin);
+      console.log(`Applied origin filter. Remaining rows: ${negociacoesData.length}`);
     }
     
     // Get unique closers from both datasets
@@ -343,23 +384,64 @@ export const fetchCloserPerformanceData = async (
 
 // New function for sales funnel data
 export const fetchCloserSalesFunnelData = async (
-  dateRange?: DateRange,
+  dateRangeStart?: DateRange,
+  dateRangeEnd?: DateRange,
   selectedCloser?: string,
   selectedOrigin?: string
 ) => {
   try {
-    const normalizedDateRange = normalizeDateRange(dateRange);
+    const normalizedDateRangeStart = normalizeDateRange(dateRangeStart);
+    const normalizedDateRangeEnd = dateRangeEnd ? normalizeDateRange(dateRangeEnd) : normalizedDateRangeStart;
     
-    // Fetch Negociacoes data with filters
-    let negociacoesData = await fetchFilteredData(
+    console.log('Fetching sales funnel data with date ranges:');
+    console.log('Start date range:', normalizedDateRangeStart);
+    console.log('End date range:', normalizedDateRangeEnd);
+    
+    // Fetch Negociacoes data with filters - using 'DATA DA CALL' (start)
+    let negociacoesStartData = await fetchFilteredData(
       'negociacoes', 
-      normalizedDateRange,
-      selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined
+      normalizedDateRangeStart,
+      selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined,
+      'start'
     );
     
+    // If dateRangeEnd is different, also fetch with end date range (DATA DO FEC.)
+    let negociacoesEndData: any[] = [];
+    if (dateRangeEnd && JSON.stringify(dateRangeEnd) !== JSON.stringify(dateRangeStart)) {
+      negociacoesEndData = await fetchFilteredData(
+        'negociacoes', 
+        normalizedDateRangeEnd,
+        selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined,
+        'end'
+      );
+      
+      // Combine unique entries from both queries
+      const allIds = new Set();
+      const combinedData: any[] = [];
+      
+      // First add all entries from start date query
+      negociacoesStartData.forEach(row => {
+        allIds.add(row.ID);
+        combinedData.push(row);
+      });
+      
+      // Then add entries from end date query that aren't already included
+      negociacoesEndData.forEach(row => {
+        if (!allIds.has(row.ID)) {
+          combinedData.push(row);
+        }
+      });
+      
+      negociacoesStartData = combinedData;
+    }
+    
+    console.log(`Fetched ${negociacoesStartData.length} rows from negociacoes`);
+    
     // Apply origin filter if selected
+    let negociacoesData = negociacoesStartData;
     if (selectedOrigin && selectedOrigin !== 'all') {
       negociacoesData = negociacoesData.filter((row: any) => row.ORIGEM === selectedOrigin);
+      console.log(`Applied origin filter. Remaining rows: ${negociacoesData.length}`);
     }
     
     // Count by funnel stage
@@ -391,21 +473,55 @@ export const fetchCloserSalesFunnelData = async (
 
 // New function for loss reasons data
 export const fetchCloserLossReasonsData = async (
-  dateRange?: DateRange,
+  dateRangeStart?: DateRange,
+  dateRangeEnd?: DateRange,
   selectedCloser?: string,
   selectedOrigin?: string
 ) => {
   try {
-    const normalizedDateRange = normalizeDateRange(dateRange);
+    const normalizedDateRangeStart = normalizeDateRange(dateRangeStart);
+    const normalizedDateRangeEnd = dateRangeEnd ? normalizeDateRange(dateRangeEnd) : normalizedDateRangeStart;
     
-    // Fetch Negociacoes data with filters
-    let negociacoesData = await fetchFilteredData(
+    // Fetch Negociacoes data with filters - using 'DATA DA CALL' (start)
+    let negociacoesStartData = await fetchFilteredData(
       'negociacoes', 
-      normalizedDateRange,
-      selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined
+      normalizedDateRangeStart,
+      selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined,
+      'start'
     );
     
+    // If dateRangeEnd is different, also fetch with end date range (DATA DO FEC.)
+    let negociacoesEndData: any[] = [];
+    if (dateRangeEnd && JSON.stringify(dateRangeEnd) !== JSON.stringify(dateRangeStart)) {
+      negociacoesEndData = await fetchFilteredData(
+        'negociacoes', 
+        normalizedDateRangeEnd,
+        selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined,
+        'end'
+      );
+      
+      // Combine unique entries from both queries
+      const allIds = new Set();
+      const combinedData: any[] = [];
+      
+      // First add all entries from start date query
+      negociacoesStartData.forEach(row => {
+        allIds.add(row.ID);
+        combinedData.push(row);
+      });
+      
+      // Then add entries from end date query that aren't already included
+      negociacoesEndData.forEach(row => {
+        if (!allIds.has(row.ID)) {
+          combinedData.push(row);
+        }
+      });
+      
+      negociacoesStartData = combinedData;
+    }
+    
     // Apply origin filter if selected
+    let negociacoesData = negociacoesStartData;
     if (selectedOrigin && selectedOrigin !== 'all') {
       negociacoesData = negociacoesData.filter((row: any) => row.ORIGEM === selectedOrigin);
     }
@@ -446,21 +562,55 @@ export const fetchCloserLossReasonsData = async (
 
 // New function for sales cycle data
 export const fetchCloserSalesCycleData = async (
-  dateRange?: DateRange,
+  dateRangeStart?: DateRange,
+  dateRangeEnd?: DateRange,
   selectedCloser?: string,
   selectedOrigin?: string
 ) => {
   try {
-    const normalizedDateRange = normalizeDateRange(dateRange);
+    const normalizedDateRangeStart = normalizeDateRange(dateRangeStart);
+    const normalizedDateRangeEnd = dateRangeEnd ? normalizeDateRange(dateRangeEnd) : normalizedDateRangeStart;
     
-    // Fetch Negociacoes data with filters
-    let negociacoesData = await fetchFilteredData(
+    // Fetch Negociacoes data with filters - using 'DATA DA CALL' (start)
+    let negociacoesStartData = await fetchFilteredData(
       'negociacoes', 
-      normalizedDateRange,
-      selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined
+      normalizedDateRangeStart,
+      selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined,
+      'start'
     );
     
+    // If dateRangeEnd is different, also fetch with end date range (DATA DO FEC.)
+    let negociacoesEndData: any[] = [];
+    if (dateRangeEnd && JSON.stringify(dateRangeEnd) !== JSON.stringify(dateRangeStart)) {
+      negociacoesEndData = await fetchFilteredData(
+        'negociacoes', 
+        normalizedDateRangeEnd,
+        selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined,
+        'end'
+      );
+      
+      // Combine unique entries from both queries
+      const allIds = new Set();
+      const combinedData: any[] = [];
+      
+      // First add all entries from start date query
+      negociacoesStartData.forEach(row => {
+        allIds.add(row.ID);
+        combinedData.push(row);
+      });
+      
+      // Then add entries from end date query that aren't already included
+      negociacoesEndData.forEach(row => {
+        if (!allIds.has(row.ID)) {
+          combinedData.push(row);
+        }
+      });
+      
+      negociacoesStartData = combinedData;
+    }
+    
     // Apply origin filter if selected
+    let negociacoesData = negociacoesStartData;
     if (selectedOrigin && selectedOrigin !== 'all') {
       negociacoesData = negociacoesData.filter((row: any) => row.ORIGEM === selectedOrigin);
     }
