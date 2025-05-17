@@ -43,9 +43,9 @@ export const getDateColumnForTable = (tableName: SupabaseTableName): string | nu
     'Leadbroker': 'DATA DA COMPRA',
     'Recomendacao': 'DATA DA RECOMENDAÇÃO',
     'Outbound': 'DATA DO AGENDAMENTO',
-    'Meta Pre Venda': null,
-    'Meta Closer': null,
-    'Meta Empresa': null
+    'Meta Pre Venda': 'Mês',
+    'Meta Closer': 'Mês',
+    'Meta Empresa': 'Mês'
   };
   
   return dateColumnMapping[tableName];
