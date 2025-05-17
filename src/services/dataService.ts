@@ -2,7 +2,15 @@
 // Re-export all functions from individual service modules
 export * from './sdrService';
 export * from './closerService';
-export * from './channelService';
+// Export from channelService with explicit naming to avoid conflicts
+export { 
+  fetchChannelsData,
+  fetchChannelProductAnalysis,
+  fetchChannelLossReasons,
+  fetchChannelMonthlyProgress,
+  // Export ChannelPerformance with an alias to avoid conflict
+  ChannelPerformance as ChannelSalesPerformance
+} from './channelService';
 export * from './salesFunnelService';
 export * from './utils/dateUtils';
 export * from './utils/tableMapping';
