@@ -22,6 +22,9 @@ export type SdrControlFormData = {
   Tempo: number;
 };
 
+// Type for our database insert
+type SdrControlDbData = SdrControlFormData & { ID: number };
+
 export async function insertSdrControlData(formData: SdrControlFormData): Promise<boolean> {
   try {
     // Convert empty string inputs to null values
@@ -57,13 +60,16 @@ export async function insertSdrControlData(formData: SdrControlFormData): Promis
     // Calculate the next available ID
     const nextId = maxIdResult && maxIdResult.length > 0 ? maxIdResult[0].ID + 1 : 1;
     
-    // Add the ID to the cleaned data
-    cleanedData.ID = nextId;
+    // Create a properly typed object with ID included
+    const dataToInsert: SdrControlDbData = {
+      ...cleanedData as SdrControlFormData,
+      ID: nextId
+    };
     
     // Now insert with the ID field included
     const { error } = await supabase
       .from('Controle Pre Venda')
-      .insert(cleanedData);
+      .insert(dataToInsert);
     
     if (error) {
       console.error("Error inserting data:", error);
