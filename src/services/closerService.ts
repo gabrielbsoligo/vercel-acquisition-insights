@@ -6,6 +6,7 @@ import {
   fetchCloserMetaData
 } from "./dataSourceService";
 import { normalizeDateRange } from "./utils/dateUtils";
+import { supabase } from "@/integrations/supabase/client";
 
 // Fetch closer KPI data using Negociacoes table as primary source
 export const fetchCloserKpiData = async (
@@ -14,7 +15,9 @@ export const fetchCloserKpiData = async (
   selectedCloser?: string
 ) => {
   try {
+    console.log(`Fetching ${kpiType} KPI data for closer: ${selectedCloser || 'all'}`);
     const normalizedDateRange = normalizeDateRange(dateRange);
+    console.log('Normalized date range:', normalizedDateRange);
     
     // Fetch Negociacoes data for sales metrics
     const negociacoesData = await fetchFilteredData(
@@ -23,6 +26,8 @@ export const fetchCloserKpiData = async (
       selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined
     );
     
+    console.log(`Fetched ${negociacoesData.length} rows from negociacoes`);
+    
     // Fetch Closer Performance data for meeting metrics
     const closerPerformanceData = await fetchFilteredData(
       'closer_performance', 
@@ -30,8 +35,11 @@ export const fetchCloserKpiData = async (
       selectedCloser && selectedCloser !== 'all' ? { Closer: selectedCloser } : undefined
     );
     
+    console.log(`Fetched ${closerPerformanceData.length} rows from closer_performance`);
+    
     // Fetch meta data
     const closerMetaData = await fetchCloserMetaData();
+    console.log(`Fetched ${closerMetaData.length} rows from meta data`);
 
     // Calculate based on KPI type
     let valorRealizado = 0;
@@ -166,6 +174,7 @@ export const fetchCloserKpiData = async (
     // Calculate percentage of completion
     const percentComplete = meta > 0 ? (valorRealizado / meta) * 100 : 0;
 
+    console.log(`KPI ${kpiType} calculated:`, { valorRealizado, meta, percentComplete });
     return {
       valorRealizado,
       meta,
