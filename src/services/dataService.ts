@@ -8,9 +8,9 @@ export {
   fetchChannelProductAnalysis,
   fetchChannelLossReasons,
   fetchChannelMonthlyProgress,
-  // Export ChannelPerformance with an alias to avoid conflict
-  ChannelPerformance as ChannelSalesPerformance
 } from './channelService';
+// Properly re-export the type with the export type syntax
+export type { ChannelPerformance as ChannelSalesPerformance } from './channelService';
 export * from './salesFunnelService';
 export * from './utils/dateUtils';
 export * from './utils/tableMapping';
