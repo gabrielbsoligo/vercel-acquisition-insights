@@ -12,8 +12,34 @@ import { Database } from "@/integrations/supabase/types";
 // Type definitions for Meta Empresa data
 type MetaEmpresa = Database['public']['Tables']['Meta Empresa']['Row'];
 
+// Improved interface for channel data
+export interface ChannelPerformance {
+  channel: string;
+  totalNegotiations: number;
+  totalValue: number;
+  avgTicket: number;
+  meta: number;
+  percentComplete: number;
+}
+
+// Extended interface with product data
+export interface ChannelProductAnalysis {
+  channel: string;
+  product: string;
+  quantity: number;
+  value: number;
+}
+
+// Interface for loss reasons
+export interface ChannelLossReason {
+  channel: string;
+  reason: string;
+  count: number;
+  percentage: number;
+}
+
 // Fetch channels data with dynamically populated channels
-export const fetchChannelsData = async (dateRange?: DateRange) => {
+export const fetchChannelsData = async (dateRange?: DateRange): Promise<ChannelPerformance[]> => {
   try {
     const normalizedDateRange = normalizeDateRange(dateRange);
     
@@ -100,70 +126,208 @@ export const fetchChannelsData = async (dateRange?: DateRange) => {
   }
 };
 
-// Fetch lead broker data with correct calculation logic
-export const fetchLeadBrokerPerformanceData = async (dateRange?: DateRange) => {
+// Get product analysis by channel
+export const fetchChannelProductAnalysis = async (dateRange?: DateRange, selectedChannel: string = 'all'): Promise<ChannelProductAnalysis[]> => {
   try {
     const normalizedDateRange = normalizeDateRange(dateRange);
     
-    // Fetch lead broker data from Supabase
-    const leadBrokerData = await fetchFilteredData('leadbroker', normalizedDateRange);
-    
-    // Get related negotiations data for sales/conversions
+    // Fetch negotiations data from Supabase
     const negociacoesData = await fetchFilteredData('negociacoes', normalizedDateRange);
     
-    // Calculate lead acquisition costs
-    const totalLeadsCost = leadBrokerData.reduce((sum: number, row: any) => 
-      sum + (row.VALOR || 0), 0);
+    // Group by channel and product
+    const productAnalysis: ChannelProductAnalysis[] = [];
     
-    const totalLeadsCount = leadBrokerData.length;
+    // Process each negotiation
+    negociacoesData.forEach((nego: any) => {
+      const channel = nego.ORIGEM;
+      const product = nego.PRODUTO;
+      
+      // Skip if channel or product is missing, or if filtering by channel and not matching
+      if (!channel || !product || (selectedChannel !== 'all' && channel !== selectedChannel)) {
+        return;
+      }
+      
+      // Find existing entry or create new one
+      let entry = productAnalysis.find(pa => pa.channel === channel && pa.product === product);
+      if (!entry) {
+        entry = {
+          channel,
+          product,
+          quantity: 0,
+          value: 0
+        };
+        productAnalysis.push(entry);
+      }
+      
+      // Update counts
+      entry.quantity += 1;
+      entry.value += (nego.VALOR || 0);
+    });
     
-    const avgCostPerLead = totalLeadsCount > 0 
-      ? totalLeadsCost / totalLeadsCount 
-      : 0;
+    // Sort by value descending
+    return productAnalysis.sort((a, b) => b.value - a.value);
+  } catch (error) {
+    console.error('Error fetching channel product analysis:', error);
+    return [];
+  }
+};
+
+// Get loss reasons by channel
+export const fetchChannelLossReasons = async (dateRange?: DateRange, selectedChannel: string = 'all'): Promise<ChannelLossReason[]> => {
+  try {
+    const normalizedDateRange = normalizeDateRange(dateRange);
     
-    // Get converted leads - leads with matching CNPJs in the negotiations table
-    const leadBrokerCNPJs = leadBrokerData
-      .map((row: any) => row.CNPJ)
-      .filter(Boolean);
+    // Fetch negotiations data from Supabase
+    const negociacoesData = await fetchFilteredData('negociacoes', normalizedDateRange);
     
-    // Find negotiations that came from leads (matching CNPJs)
-    const leadNegotiations = negociacoesData.filter((row: any) => 
-      row.CNPJ && leadBrokerCNPJs.includes(row.CNPJ)
+    // Get negotiations that were lost
+    const lostNegotiations = negociacoesData.filter((nego: any) => 
+      nego.STATUS === 'Perdido' || nego.STATUS === 'Perda'
     );
     
-    const convertedLeads = leadNegotiations.length;
+    // Group by channel and loss reason
+    const channelLossMap: Record<string, Record<string, number>> = {};
+    const channelTotalLosses: Record<string, number> = {};
     
-    const conversionRate = totalLeadsCount > 0 
-      ? (convertedLeads / totalLeadsCount) * 100 
-      : 0;
+    // Process each lost negotiation
+    lostNegotiations.forEach((nego: any) => {
+      const channel = nego.ORIGEM;
+      const reason = nego.MOTIVOS_DE_PERDA || 'Não informado';
+      
+      // Skip if filtering by channel and not matching
+      if (!channel || (selectedChannel !== 'all' && channel !== selectedChannel)) {
+        return;
+      }
+      
+      // Initialize channel map if needed
+      if (!channelLossMap[channel]) {
+        channelLossMap[channel] = {};
+        channelTotalLosses[channel] = 0;
+      }
+      
+      // Update loss reason count
+      channelLossMap[channel][reason] = (channelLossMap[channel][reason] || 0) + 1;
+      channelTotalLosses[channel] += 1;
+    });
     
-    // Calculate revenue from converted leads using the Negociacoes table
-    const totalRevenue = leadNegotiations.reduce((sum: number, row: any) => 
-      sum + (row.VALOR || 0), 0);
+    // Convert to array format
+    const lossReasons: ChannelLossReason[] = [];
     
-    const roi = totalLeadsCost > 0 
-      ? ((totalRevenue - totalLeadsCost) / totalLeadsCost) * 100 
-      : 0;
+    Object.entries(channelLossMap).forEach(([channel, reasons]) => {
+      const totalForChannel = channelTotalLosses[channel];
+      
+      Object.entries(reasons).forEach(([reason, count]) => {
+        lossReasons.push({
+          channel,
+          reason,
+          count,
+          percentage: (count / totalForChannel) * 100
+        });
+      });
+    });
     
-    return {
-      totalLeadsCost,
-      totalLeadsCount,
-      avgCostPerLead,
-      convertedLeads,
-      conversionRate,
-      totalRevenue,
-      roi
-    };
+    // Sort by count descending within each channel
+    return lossReasons.sort((a, b) => {
+      if (a.channel === b.channel) {
+        return b.count - a.count;
+      }
+      return a.channel.localeCompare(b.channel);
+    });
   } catch (error) {
-    console.error('Error fetching lead broker performance data:', error);
-    return {
-      totalLeadsCost: 0,
-      totalLeadsCount: 0,
-      avgCostPerLead: 0,
-      convertedLeads: 0,
-      conversionRate: 0,
-      totalRevenue: 0,
-      roi: 0
-    };
+    console.error('Error fetching channel loss reasons:', error);
+    return [];
+  }
+};
+
+// Get monthly progress data for a specific channel and month
+export const fetchChannelMonthlyProgress = async (
+  channel: string,
+  month: number,
+  year: number
+): Promise<any[]> => {
+  try {
+    // Create date range for the selected month
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0); // Last day of month
+    
+    const dateRange = { from: startDate, to: endDate };
+    
+    // Fetch negotiations data from Supabase
+    const negociacoesData = await fetchFilteredData('negociacoes', dateRange);
+    
+    // Filter by channel
+    const channelNegotiations = negociacoesData.filter((nego: any) => 
+      nego.ORIGEM === channel
+    );
+    
+    // Get meta for the channel for this month
+    const empresaMetaData = await fetchEmpresaMetaData() as MetaEmpresa[];
+    
+    // Find relevant meta entries
+    const channelMeta = empresaMetaData.filter((row: MetaEmpresa) => {
+      if (!row.Mês) return false;
+      
+      const rowDate = parseDate(row.Mês);
+      const rowMonth = rowDate.getMonth() + 1;
+      const rowYear = rowDate.getFullYear();
+      
+      return rowMonth === month && rowYear === year && row.Canal === channel;
+    });
+    
+    // Calculate total meta
+    let totalMeta = 0;
+    
+    const mrrMetaRow = channelMeta.find((row: MetaEmpresa) => row.Tipo === 'MRR');
+    if (mrrMetaRow && mrrMetaRow.Valor !== null) {
+      totalMeta += mrrMetaRow.Valor;
+    }
+    
+    const oneTimeMetaRow = channelMeta.find((row: MetaEmpresa) => row.Tipo === 'One Time');
+    if (oneTimeMetaRow && oneTimeMetaRow.Valor !== null) {
+      totalMeta += oneTimeMetaRow.Valor;
+    }
+    
+    // Create daily data points (simplification - real data would need to be grouped by date)
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const progressData = [];
+    
+    // Group negotiations by date
+    const valueByDay: Record<number, number> = {};
+    
+    channelNegotiations.forEach((nego: any) => {
+      if (nego.DATA_DO_FEC) {
+        const fechDate = parseDate(nego.DATA_DO_FEC);
+        const day = fechDate.getDate();
+        
+        valueByDay[day] = (valueByDay[day] || 0) + (nego.VALOR || 0);
+      }
+    });
+    
+    // Calculate ideal daily target (linear progression)
+    const dailyTarget = totalMeta / daysInMonth;
+    
+    // Create progress data points
+    let cumulativeActual = 0;
+    let cumulativeIdeal = 0;
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      cumulativeActual += (valueByDay[day] || 0);
+      cumulativeIdeal += dailyTarget;
+      
+      // Only include data points for days that have passed or have data
+      const currentDay = new Date();
+      if (new Date(year, month - 1, day) <= currentDay || valueByDay[day]) {
+        progressData.push({
+          dia: day,
+          atingimentoAcumulado: cumulativeActual,
+          idealAcumulado: cumulativeIdeal
+        });
+      }
+    }
+    
+    return progressData;
+  } catch (error) {
+    console.error('Error fetching channel monthly progress:', error);
+    return [];
   }
 };

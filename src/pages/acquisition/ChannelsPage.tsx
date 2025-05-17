@@ -1,6 +1,5 @@
 
-import React, { useState, useEffect } from "react";
-import { DateRange } from "react-day-picker";
+import React from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { KpiCard } from "@/components/dashboard/KpiCard";
@@ -38,67 +37,69 @@ import {
   BadgeCent,
   GitFork,
   History,
+  Loader2,
 } from "lucide-react";
+import { useChannelsData } from "@/hooks/useChannelsData";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const ChannelsPage: React.FC = () => {
-  const [dateRangeStart, setDateRangeStart] = useState<DateRange | undefined>({
-    from: new Date(2025, 4, 1), // May 1, 2025
-    to: new Date(2025, 4, 31), // May 31, 2025
-  });
-  
-  const [dateRangeEnd, setDateRangeEnd] = useState<DateRange | undefined>({
-    from: new Date(2025, 4, 1), // May 1, 2025
-    to: new Date(2025, 4, 31), // May 31, 2025
-  });
-  
-  const [selectedChannel, setSelectedChannel] = useState<string>("all");
-  
-  // State for chart data
-  const [channelData, setChannelData] = useState<any[]>([]);
-  const [pieChartData, setPieChartData] = useState<any[]>([]);
+  const {
+    // Date ranges
+    dateRangeStart,
+    setDateRangeStart,
+    dateRangeEnd,
+    setDateRangeEnd,
+    
+    // Filters
+    selectedChannel,
+    setSelectedChannel,
+    selectedMonth,
+    setSelectedMonth,
+    selectedYear,
+    
+    // Raw data
+    channelsData,
+    productAnalysis,
+    lossReasons,
+    monthlyProgress,
+    
+    // Processed data for charts
+    channelComparisonData,
+    pieChartData,
+    goalVsAchievedData,
+    
+    // Loading states
+    isLoading,
+  } = useChannelsData();
 
   // Mock colors for charts
   const COLORS = ['#e50915', '#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+  
+  // Get lead broker channel data for KPI cards
+  const leadBrokerData = channelsData?.find(c => c.channel === 'Leadbroker') || {
+    channel: 'Leadbroker',
+    totalNegotiations: 0,
+    totalValue: 0,
+    avgTicket: 0,
+    meta: 0,
+    percentComplete: 0
+  };
 
-  // Mock data for demonstration
-  useEffect(() => {
-    // In a real app, this would fetch from the CSV files based on the filters
-    const loadData = async () => {
-      // Mock channel data
-      setChannelData([
-        {
-          canal: "LeadBroker",
-          valorVendido: 80000,
-          numVendas: 15,
-        },
-        {
-          canal: "Outbound",
-          valorVendido: 60000,
-          numVendas: 10,
-        },
-        {
-          canal: "Recomendação",
-          valorVendido: 30000,
-          numVendas: 5,
-        },
-        {
-          canal: "Networking",
-          valorVendido: 10000,
-          numVendas: 2,
-        },
-      ]);
+  // Helper to format currency values
+  const formatCurrency = (value: number) => {
+    return `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  };
 
-      // Mock pie chart data
-      setPieChartData([
-        { name: "LeadBroker", value: 44.4 },
-        { name: "Outbound", value: 33.3 },
-        { name: "Recomendação", value: 16.7 },
-        { name: "Networking", value: 5.6 },
-      ]);
-    };
-
-    loadData();
-  }, [dateRangeStart, dateRangeEnd, selectedChannel]);
+  if (isLoading) {
+    return (
+      <DashboardLayout title="Performance por Canais de Vendas">
+        <div className="flex flex-col items-center justify-center h-[70vh]">
+          <Loader2 className="h-12 w-12 animate-spin text-gray-400" />
+          <p className="mt-4 text-lg text-gray-500">Carregando dados dos canais...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="Performance por Canais de Vendas">
@@ -125,11 +126,11 @@ const ChannelsPage: React.FC = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os Canais</SelectItem>
-              <SelectItem value="leadbroker">Leadbroker</SelectItem>
-              <SelectItem value="outbound">Outbound</SelectItem>
-              <SelectItem value="recomendacao">Recomendação</SelectItem>
-              <SelectItem value="networking">Networking</SelectItem>
-              <SelectItem value="indicacao">Indicação</SelectItem>
+              {channelsData?.map((channel) => (
+                <SelectItem key={channel.channel} value={channel.channel}>
+                  {channel.channel}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -139,21 +140,21 @@ const ChannelsPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
         <KpiCard 
           title="Vendas por Canal (LeadBroker)" 
-          value="15" 
+          value={leadBrokerData.totalNegotiations.toString()} 
           icon={Activity}
           goal="20"
-          percentComplete={75}
+          percentComplete={Math.min(leadBrokerData.totalNegotiations / 20 * 100, 100)}
         />
         <KpiCard 
           title="Valor Vendido (LeadBroker)" 
-          value="R$ 80.000" 
+          value={formatCurrency(leadBrokerData.totalValue)} 
           icon={TrendingUp}
-          goal="R$ 110.000"
-          percentComplete={73}
+          goal={formatCurrency(leadBrokerData.meta)}
+          percentComplete={Math.min(leadBrokerData.percentComplete, 100)}
         />
         <KpiCard 
           title="Ticket Médio (LeadBroker)" 
-          value="R$ 5.333" 
+          value={formatCurrency(leadBrokerData.avgTicket)} 
           icon={BadgeCent}
         />
         <KpiCard 
@@ -181,7 +182,7 @@ const ChannelsPage: React.FC = () => {
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart
-                data={channelData}
+                data={channelComparisonData}
                 margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" />
@@ -232,11 +233,7 @@ const ChannelsPage: React.FC = () => {
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart
-              data={[
-                { mes: "Maio", canal: "LeadBroker", realizadoValor: 80000, metaValorTotal: 110000, realizadoMRR: 62000, metaMRR: 80000, realizadoOneTime: 18000, metaOneTime: 30000 },
-                { mes: "Maio", canal: "Outbound", realizadoValor: 60000, metaValorTotal: 50000, realizadoMRR: 40000, metaMRR: 30000, realizadoOneTime: 20000, metaOneTime: 20000 },
-                { mes: "Maio", canal: "Recomendação", realizadoValor: 30000, metaValorTotal: 30000, realizadoMRR: 25000, metaMRR: 25000, realizadoOneTime: 5000, metaOneTime: 5000 },
-              ]}
+              data={goalVsAchievedData}
               margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray="3 3" />
@@ -259,54 +256,34 @@ const ChannelsPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left font-medium p-2">Canal</th>
-                    <th className="text-left font-medium p-2">Produto</th>
-                    <th className="text-right font-medium p-2">Qtd. Vendida</th>
-                    <th className="text-right font-medium p-2">Valor Vendido</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b">
-                    <td className="p-2">LeadBroker</td>
-                    <td className="p-2">Assessoria</td>
-                    <td className="p-2 text-right">10</td>
-                    <td className="p-2 text-right">R$ 40.000</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="p-2">LeadBroker</td>
-                    <td className="p-2">Estruturação Estratégica</td>
-                    <td className="p-2 text-right">5</td>
-                    <td className="p-2 text-right">R$ 40.000</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="p-2">Outbound</td>
-                    <td className="p-2">Assessoria</td>
-                    <td className="p-2 text-right">8</td>
-                    <td className="p-2 text-right">R$ 32.000</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="p-2">Outbound</td>
-                    <td className="p-2">Estruturação Estratégica</td>
-                    <td className="p-2 text-right">2</td>
-                    <td className="p-2 text-right">R$ 28.000</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="p-2">Recomendação</td>
-                    <td className="p-2">Assessoria</td>
-                    <td className="p-2 text-right">3</td>
-                    <td className="p-2 text-right">R$ 12.000</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="p-2">Recomendação</td>
-                    <td className="p-2">Estruturação Estratégica</td>
-                    <td className="p-2 text-right">2</td>
-                    <td className="p-2 text-right">R$ 18.000</td>
-                  </tr>
-                </tbody>
-              </table>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Canal</TableHead>
+                    <TableHead>Produto</TableHead>
+                    <TableHead className="text-right">Qtd. Vendida</TableHead>
+                    <TableHead className="text-right">Valor Vendido</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {productAnalysis && productAnalysis.length > 0 ? (
+                    productAnalysis.slice(0, 10).map((item, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{item.channel}</TableCell>
+                        <TableCell>{item.product}</TableCell>
+                        <TableCell className="text-right">{item.quantity}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(item.value)}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-4 text-gray-500">
+                        Nenhum dado disponível
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>
@@ -317,60 +294,34 @@ const ChannelsPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left font-medium p-2">Canal</th>
-                    <th className="text-left font-medium p-2">Motivo de Perda</th>
-                    <th className="text-right font-medium p-2">Quantidade</th>
-                    <th className="text-right font-medium p-2">% do Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b">
-                    <td className="p-2">LeadBroker</td>
-                    <td className="p-2">Sem Budget</td>
-                    <td className="p-2 text-right">5</td>
-                    <td className="p-2 text-right">42%</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="p-2">LeadBroker</td>
-                    <td className="p-2">Comprado do concorrente</td>
-                    <td className="p-2 text-right">4</td>
-                    <td className="p-2 text-right">33%</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="p-2">LeadBroker</td>
-                    <td className="p-2">Não viu valor</td>
-                    <td className="p-2 text-right">3</td>
-                    <td className="p-2 text-right">25%</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="p-2">Outbound</td>
-                    <td className="p-2">Sem Budget</td>
-                    <td className="p-2 text-right">3</td>
-                    <td className="p-2 text-right">30%</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="p-2">Outbound</td>
-                    <td className="p-2">Timing errado</td>
-                    <td className="p-2 text-right">3</td>
-                    <td className="p-2 text-right">30%</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="p-2">Outbound</td>
-                    <td className="p-2">Não viu valor</td>
-                    <td className="p-2 text-right">2</td>
-                    <td className="p-2 text-right">20%</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="p-2">Outbound</td>
-                    <td className="p-2">Outros</td>
-                    <td className="p-2 text-right">2</td>
-                    <td className="p-2 text-right">20%</td>
-                  </tr>
-                </tbody>
-              </table>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Canal</TableHead>
+                    <TableHead>Motivo de Perda</TableHead>
+                    <TableHead className="text-right">Quantidade</TableHead>
+                    <TableHead className="text-right">% do Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {lossReasons && lossReasons.length > 0 ? (
+                    lossReasons.slice(0, 10).map((item, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{item.channel}</TableCell>
+                        <TableCell>{item.reason}</TableCell>
+                        <TableCell className="text-right">{item.count}</TableCell>
+                        <TableCell className="text-right">{item.percentage.toFixed(1)}%</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-4 text-gray-500">
+                        Nenhum dado disponível
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>
@@ -385,41 +336,44 @@ const ChannelsPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div className="flex items-center gap-4">
               <div className="text-sm">Selecionar Canal</div>
-              <Select defaultValue="leadbroker">
+              <Select 
+                value={selectedChannel !== 'all' ? selectedChannel : 'Leadbroker'}
+                onValueChange={setSelectedChannel}
+              >
                 <SelectTrigger className="w-36">
                   <SelectValue placeholder="Canal" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="leadbroker">LeadBroker</SelectItem>
-                  <SelectItem value="outbound">Outbound</SelectItem>
-                  <SelectItem value="recomendacao">Recomendação</SelectItem>
+                  {channelsData?.map((channel) => (
+                    <SelectItem key={channel.channel} value={channel.channel}>
+                      {channel.channel}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-sm">Selecionar Mês</div>
-              <Select defaultValue="may">
+              <Select 
+                value={selectedMonth.toString()}
+                onValueChange={(value) => setSelectedMonth(parseInt(value))}
+              >
                 <SelectTrigger className="w-36">
                   <SelectValue placeholder="Mês" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="may">Maio 2025</SelectItem>
-                  <SelectItem value="apr">Abril 2025</SelectItem>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+                    <SelectItem key={month} value={month.toString()}>
+                      {new Date(2023, month - 1, 1).toLocaleString('pt-BR', { month: 'long' })}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
           <ResponsiveContainer width="100%" height={270}>
             <LineChart
-              data={[
-                { dia: 1, atingimentoAcumulado: 2000, idealAcumulado: 3670 },
-                { dia: 5, atingimentoAcumulado: 10000, idealAcumulado: 18350 },
-                { dia: 10, atingimentoAcumulado: 30000, idealAcumulado: 36700 },
-                { dia: 15, atingimentoAcumulado: 45000, idealAcumulado: 55050 },
-                { dia: 20, atingimentoAcumulado: 60000, idealAcumulado: 73400 },
-                { dia: 25, atingimentoAcumulado: 72000, idealAcumulado: 91750 },
-                { dia: 30, atingimentoAcumulado: 80000, idealAcumulado: 110000 },
-              ]}
+              data={monthlyProgress || []}
               margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray="3 3" />
