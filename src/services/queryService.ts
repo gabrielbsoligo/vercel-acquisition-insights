@@ -28,6 +28,7 @@ export const fetchFilteredData = async (
     // Add date range filters on the server side
     const dateColumn = getDateColumnForTable(supabaseTableName, dateType);
     
+    console.log(`QUERY_SERVICE_MAP: Mapeamento para "${internalTableName}": Tabela Supabase="${supabaseTableName}", Coluna Data="${dateColumn}" (tipo: ${dateType || 'default'})`);
     console.log(`Fetching data from table: ${supabaseTableName}`);
     console.log(`Using date column: ${dateColumn || 'No date column'} (type: ${dateType || 'default'})`);
     console.log(`Date range: ${dateRange.from.toISOString()} to ${dateRange.to.toISOString()}`);
