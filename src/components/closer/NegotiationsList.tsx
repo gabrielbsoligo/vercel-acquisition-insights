@@ -15,6 +15,7 @@ import { formatCurrency } from "@/services/utils/formatters";
 interface Negotiation {
   ID: number;
   EMPRESA: string;
+  EMPRRESA: string; // Campo duplicado no banco
   PRODUTO: string;
   VALOR: number;
   STATUS: string;
@@ -48,7 +49,8 @@ export const NegotiationsList: React.FC<NegotiationsListProps> = ({
     const lowerSearchTerm = searchTerm.toLowerCase();
     
     const filtered = negotiations.filter(negotiation => 
-      negotiation.EMPRESA?.toLowerCase().includes(lowerSearchTerm) ||
+      (negotiation.EMPRESA?.toLowerCase().includes(lowerSearchTerm) || 
+       negotiation.EMPRRESA?.toLowerCase().includes(lowerSearchTerm)) ||
       negotiation.PRODUTO?.toLowerCase().includes(lowerSearchTerm) ||
       negotiation.CLOSER?.toLowerCase().includes(lowerSearchTerm) ||
       negotiation.ORIGEM?.toLowerCase().includes(lowerSearchTerm) ||
@@ -87,6 +89,11 @@ export const NegotiationsList: React.FC<NegotiationsListProps> = ({
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  // Função para obter o nome da empresa (considerando os dois campos possíveis)
+  const getCompanyName = (negotiation: Negotiation): string => {
+    return negotiation.EMPRESA || negotiation.EMPRRESA || '-';
   };
 
   if (isLoading) {
@@ -135,7 +142,7 @@ export const NegotiationsList: React.FC<NegotiationsListProps> = ({
               ) : (
                 filteredNegotiations.map((negotiation) => (
                   <TableRow key={negotiation.ID}>
-                    <TableCell className="font-medium">{negotiation.EMPRESA || '-'}</TableCell>
+                    <TableCell className="font-medium">{getCompanyName(negotiation)}</TableCell>
                     <TableCell>{negotiation.PRODUTO || '-'}</TableCell>
                     <TableCell>{formatCurrency(negotiation.VALOR || 0)}</TableCell>
                     <TableCell>
