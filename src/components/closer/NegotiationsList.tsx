@@ -48,11 +48,11 @@ export const NegotiationsList: React.FC<NegotiationsListProps> = ({
     const lowerSearchTerm = searchTerm.toLowerCase();
     
     const filtered = negotiations.filter(negotiation => 
-      negotiation.EMPRESA?.toLowerCase().includes(lowerSearchTerm) ||
-      negotiation.PRODUTO?.toLowerCase().includes(lowerSearchTerm) ||
-      negotiation.CLOSER?.toLowerCase().includes(lowerSearchTerm) ||
-      negotiation.ORIGEM?.toLowerCase().includes(lowerSearchTerm) ||
-      negotiation.STATUS?.toLowerCase().includes(lowerSearchTerm)
+      (negotiation.EMPRESA?.toLowerCase() || '').includes(lowerSearchTerm) ||
+      (negotiation.PRODUTO?.toLowerCase() || '').includes(lowerSearchTerm) ||
+      (negotiation.CLOSER?.toLowerCase() || '').includes(lowerSearchTerm) ||
+      (negotiation.ORIGEM?.toLowerCase() || '').includes(lowerSearchTerm) ||
+      (negotiation.STATUS?.toLowerCase() || '').includes(lowerSearchTerm)
     );
     
     setFilteredNegotiations(filtered);
@@ -143,9 +143,9 @@ export const NegotiationsList: React.FC<NegotiationsListProps> = ({
                         {negotiation.STATUS || '-'}
                       </span>
                     </TableCell>
-                    <TableCell>{formatDate(negotiation.DATA_DA_CALL)}</TableCell>
-                    <TableCell>{formatDate(negotiation.DATA_DO_FEC)}</TableCell>
-                    <TableCell>{negotiation.CURVA_DIAS || '-'}</TableCell>
+                    <TableCell>{formatDate(negotiation["DATA DA CALL"])}</TableCell>
+                    <TableCell>{formatDate(negotiation["DATA DO FEC."])}</TableCell>
+                    <TableCell>{negotiation["CURVA DIAS"] || '-'}</TableCell>
                     <TableCell>{negotiation.CLOSER || '-'}</TableCell>
                     <TableCell>{negotiation.ORIGEM || '-'}</TableCell>
                   </TableRow>

@@ -29,6 +29,7 @@ export const fetchCloserKpiData = async (
     );
     
     console.log(`Fetched ${negociacoesData.length} rows from negociacoes`);
+    console.log('Sample data:', negociacoesData[0]);
     
     // Fetch Closer Performance data for meeting metrics
     const closerPerformanceData = await fetchFilteredData(
@@ -222,16 +223,19 @@ export const fetchCloserPerformanceData = async (
     );
     
     console.log(`Fetched ${negociacoesData.length} rows from negociacoes`);
+    console.log('Sample negotiations data:', negociacoesData.length > 0 ? negociacoesData[0] : 'No data');
     
     // Apply origin filter if selected
     let filteredNegociacoes = negociacoesData;
     if (selectedOrigin && selectedOrigin !== 'all') {
       filteredNegociacoes = filteredNegociacoes.filter((row: any) => {
         // Make sure ORIGEM exists and do a case-insensitive comparison
-        const origem = row.ORIGEM ? row.ORIGEM.toUpperCase() : '';
-        return origem === selectedOrigin.toUpperCase();
+        const origem = row.ORIGEM ? String(row.ORIGEM).toUpperCase() : '';
+        const selectedValue = String(selectedOrigin).toUpperCase();
+        console.log(`Comparing origin: "${origem}" with selected: "${selectedValue}"`);
+        return origem === selectedValue;
       });
-      console.log(`Applied origin filter. Remaining rows: ${filteredNegociacoes.length}`);
+      console.log(`After origin filter. Rows: ${filteredNegociacoes.length}`);
     }
     
     // Get unique closers from both datasets
@@ -378,15 +382,19 @@ export const fetchCloserSalesFunnelData = async (
     );
     
     console.log(`Fetched ${negociacoesData.length} rows from negociacoes`);
+    console.log('Sample negotiations data:', negociacoesData.length > 0 ? negociacoesData[0] : 'No data');
     
     // Apply origin filter if selected
     if (selectedOrigin && selectedOrigin !== 'all') {
+      const beforeFilter = negociacoesData.length;
       negociacoesData = negociacoesData.filter((row: any) => {
         // Make sure ORIGEM exists and do a case-insensitive comparison
-        const origem = row.ORIGEM ? row.ORIGEM.toUpperCase() : '';
-        return origem === selectedOrigin.toUpperCase();
+        const origem = row.ORIGEM ? String(row.ORIGEM).toUpperCase() : '';
+        const selectedValue = String(selectedOrigin).toUpperCase();
+        console.log(`Comparing origin: "${origem}" with selected: "${selectedValue}"`);
+        return origem === selectedValue;
       });
-      console.log(`Applied origin filter. Remaining rows: ${negociacoesData.length}`);
+      console.log(`Origin filter: before=${beforeFilter}, after=${negociacoesData.length}`);
     }
     
     // Count by funnel stage
@@ -437,8 +445,9 @@ export const fetchCloserLossReasonsData = async (
     if (selectedOrigin && selectedOrigin !== 'all') {
       negociacoesData = negociacoesData.filter((row: any) => {
         // Make sure ORIGEM exists and do a case-insensitive comparison
-        const origem = row.ORIGEM ? row.ORIGEM.toUpperCase() : '';
-        return origem === selectedOrigin.toUpperCase();
+        const origem = row.ORIGEM ? String(row.ORIGEM).toUpperCase() : '';
+        const selectedValue = String(selectedOrigin).toUpperCase();
+        return origem === selectedValue;
       });
     }
     
@@ -497,12 +506,13 @@ export const fetchCloserSalesCycleData = async (
     if (selectedOrigin && selectedOrigin !== 'all') {
       negociacoesData = negociacoesData.filter((row: any) => {
         // Make sure ORIGEM exists and do a case-insensitive comparison
-        const origem = row.ORIGEM ? row.ORIGEM.toUpperCase() : '';
-        return origem === selectedOrigin.toUpperCase();
+        const origem = row.ORIGEM ? String(row.ORIGEM).toUpperCase() : '';
+        const selectedValue = String(selectedOrigin).toUpperCase();
+        return origem === selectedValue;
       });
     }
     
-    // Define cycle ranges
+    // Define cycle ranges and filter finalized deals
     const faixas = {
       '0-7 dias': 0,
       '8-14 dias': 0,
@@ -569,13 +579,21 @@ export const fetchNegotiations = async (
       'start'
     );
     
+    console.log(`Negotiations - Fetched ${negociacoesData.length} rows from negociacoes`);
+    console.log('Sample data:', negociacoesData.length > 0 ? negociacoesData[0] : 'No data');
+    
     // Apply origin filter if selected
     if (selectedOrigin && selectedOrigin !== 'all') {
+      const beforeFilter = negociacoesData.length;
       negociacoesData = negociacoesData.filter((row: any) => {
         // Make sure ORIGEM exists and do a case-insensitive comparison
-        const origem = row.ORIGEM ? row.ORIGEM.toUpperCase() : '';
-        return origem === selectedOrigin.toUpperCase();
+        const origem = row.ORIGEM ? String(row.ORIGEM).toUpperCase() : '';
+        const selectedValue = String(selectedOrigin).toUpperCase();
+        console.log(`Comparing origin: "${origem}" with selected: "${selectedValue}"`);
+        const matches = origem === selectedValue;
+        return matches;
       });
+      console.log(`Origin filter: before=${beforeFilter}, after=${negociacoesData.length}`);
     }
     
     return negociacoesData;
