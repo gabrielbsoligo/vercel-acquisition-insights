@@ -398,7 +398,7 @@ export const fetchCloserSalesFunnelData = async (
     // Create funnel data array
     return [
       { etapa: 'Oportunidades Iniciadas', valor: iniciados },
-      { etapa: 'Em Negociaç��o', valor: emNegociacao },
+      { etapa: 'Em Negociação', valor: emNegociacao },
       { etapa: 'Ganhos', valor: ganhos },
       { etapa: 'Perdidos', valor: perdidos }
     ];
@@ -555,10 +555,7 @@ export const fetchNegotiations = async (
     
     // Apply origin filter if selected
     if (selectedOrigin && selectedOrigin !== 'all') {
-      negociacoesData = negociacoesData.filter((row: any) => 
-        row.ORIGEM && row.ORIGEM.toLowerCase() === selectedOrigin.toLowerCase()
-      );
-      console.log(`Applied origin filter (${selectedOrigin}). Remaining rows: ${negociacoesData.length}`);
+      negociacoesData = negociacoesData.filter((row: any) => row.ORIGEM === selectedOrigin);
     }
     
     return negociacoesData;
