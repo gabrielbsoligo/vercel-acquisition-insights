@@ -256,7 +256,7 @@ export type Database = {
           "DATA DA CALL": string | null
           "DATA DO FEC.": string | null
           "DATA RETOMADA": string | null
-          EMPRRESA: string | null
+          EMPRESA: string | null
           ID: number
           "LINK CONTRATO": string | null
           "MOTIVOS DE PERDA": string | null
@@ -277,7 +277,7 @@ export type Database = {
           "DATA DA CALL"?: string | null
           "DATA DO FEC."?: string | null
           "DATA RETOMADA"?: string | null
-          EMPRRESA?: string | null
+          EMPRESA?: string | null
           ID: number
           "LINK CONTRATO"?: string | null
           "MOTIVOS DE PERDA"?: string | null
@@ -298,7 +298,7 @@ export type Database = {
           "DATA DA CALL"?: string | null
           "DATA DO FEC."?: string | null
           "DATA RETOMADA"?: string | null
-          EMPRRESA?: string | null
+          EMPRESA?: string | null
           ID?: number
           "LINK CONTRATO"?: string | null
           "MOTIVOS DE PERDA"?: string | null

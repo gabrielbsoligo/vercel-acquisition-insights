@@ -226,7 +226,11 @@ export const fetchCloserPerformanceData = async (
     // Apply origin filter if selected
     let filteredNegociacoes = negociacoesData;
     if (selectedOrigin && selectedOrigin !== 'all') {
-      filteredNegociacoes = filteredNegociacoes.filter((row: any) => row.ORIGEM === selectedOrigin);
+      filteredNegociacoes = filteredNegociacoes.filter((row: any) => {
+        // Make sure ORIGEM exists and do a case-insensitive comparison
+        const origem = row.ORIGEM ? row.ORIGEM.toUpperCase() : '';
+        return origem === selectedOrigin.toUpperCase();
+      });
       console.log(`Applied origin filter. Remaining rows: ${filteredNegociacoes.length}`);
     }
     
@@ -377,7 +381,11 @@ export const fetchCloserSalesFunnelData = async (
     
     // Apply origin filter if selected
     if (selectedOrigin && selectedOrigin !== 'all') {
-      negociacoesData = negociacoesData.filter((row: any) => row.ORIGEM === selectedOrigin);
+      negociacoesData = negociacoesData.filter((row: any) => {
+        // Make sure ORIGEM exists and do a case-insensitive comparison
+        const origem = row.ORIGEM ? row.ORIGEM.toUpperCase() : '';
+        return origem === selectedOrigin.toUpperCase();
+      });
       console.log(`Applied origin filter. Remaining rows: ${negociacoesData.length}`);
     }
     
@@ -427,7 +435,11 @@ export const fetchCloserLossReasonsData = async (
     
     // Apply origin filter if selected
     if (selectedOrigin && selectedOrigin !== 'all') {
-      negociacoesData = negociacoesData.filter((row: any) => row.ORIGEM === selectedOrigin);
+      negociacoesData = negociacoesData.filter((row: any) => {
+        // Make sure ORIGEM exists and do a case-insensitive comparison
+        const origem = row.ORIGEM ? row.ORIGEM.toUpperCase() : '';
+        return origem === selectedOrigin.toUpperCase();
+      });
     }
     
     // Filter only lost deals
@@ -483,7 +495,11 @@ export const fetchCloserSalesCycleData = async (
     
     // Apply origin filter if selected
     if (selectedOrigin && selectedOrigin !== 'all') {
-      negociacoesData = negociacoesData.filter((row: any) => row.ORIGEM === selectedOrigin);
+      negociacoesData = negociacoesData.filter((row: any) => {
+        // Make sure ORIGEM exists and do a case-insensitive comparison
+        const origem = row.ORIGEM ? row.ORIGEM.toUpperCase() : '';
+        return origem === selectedOrigin.toUpperCase();
+      });
     }
     
     // Define cycle ranges
@@ -555,7 +571,11 @@ export const fetchNegotiations = async (
     
     // Apply origin filter if selected
     if (selectedOrigin && selectedOrigin !== 'all') {
-      negociacoesData = negociacoesData.filter((row: any) => row.ORIGEM === selectedOrigin);
+      negociacoesData = negociacoesData.filter((row: any) => {
+        // Make sure ORIGEM exists and do a case-insensitive comparison
+        const origem = row.ORIGEM ? row.ORIGEM.toUpperCase() : '';
+        return origem === selectedOrigin.toUpperCase();
+      });
     }
     
     return negociacoesData;
