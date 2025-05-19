@@ -1,4 +1,3 @@
-
 import { DateRange } from "react-day-picker";
 import { fetchFilteredData } from "./queryService";
 import { normalizeDateRange } from "./utils/dateUtils";
@@ -533,6 +532,35 @@ export const fetchCloserSalesCycleData = async (
     }));
   } catch (error) {
     console.error('Error fetching sales cycle data:', error);
+    return [];
+  }
+};
+
+// Fetch negotiations based on filters - Using only DATA DA CALL for filtering
+export const fetchNegotiations = async (
+  dateRange?: DateRange,
+  selectedCloser?: string,
+  selectedOrigin?: string
+) => {
+  try {
+    const normalizedDateRange = normalizeDateRange(dateRange);
+    
+    // Fetch Negociacoes data with filters - using 'DATA DA CALL' (start)
+    let negociacoesData = await fetchFilteredData(
+      'negociacoes', 
+      normalizedDateRange,
+      selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined,
+      'start'
+    );
+    
+    // Apply origin filter if selected
+    if (selectedOrigin && selectedOrigin !== 'all') {
+      negociacoesData = negociacoesData.filter((row: any) => row.ORIGEM === selectedOrigin);
+    }
+    
+    return negociacoesData;
+  } catch (error) {
+    console.error('Error fetching negotiations data:', error);
     return [];
   }
 };

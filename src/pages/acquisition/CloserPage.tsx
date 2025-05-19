@@ -46,12 +46,15 @@ import {
   fetchCloserPerformanceData,
   fetchCloserSalesFunnelData,
   fetchCloserLossReasonsData,
-  fetchCloserSalesCycleData
+  fetchCloserSalesCycleData,
+  fetchNegotiations
 } from "@/services/closerService";
 import { LoadingState } from "@/components/lead-broker/LoadingState";
 import { NoDataState } from "@/components/lead-broker/NoDataState";
+import { NegotiationsList } from "@/components/closer/NegotiationsList";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { formatCurrency, formatPercent } from "@/services/utils/formatters";
 
 // Define types for data structures
 interface KpiData {
@@ -127,6 +130,10 @@ const CloserPage: React.FC = () => {
   // Chart colors
   const COLORS = ['#e50915', '#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
+  // State for negotiations
+  const [negotiations, setNegotiations] = useState<any[]>([]);
+  const [loadingNegotiations, setLoadingNegotiations] = useState<boolean>(true);
+  
   // Function to reset filters
   const resetFilters = () => {
     setDateRange(getDefaultDateRange());
@@ -140,6 +147,7 @@ const CloserPage: React.FC = () => {
     const loadData = async () => {
       try {
         setIsLoading(true);
+        setLoadingNegotiations(true);
         
         // Ensure we have valid date range for fetching
         const validDateRange = dateRange || getDefaultDateRange();
@@ -184,6 +192,13 @@ const CloserPage: React.FC = () => {
           selectedOrigin
         );
         
+        // Load negotiations data
+        const negotiationsData = await fetchNegotiations(
+          validDateRange,
+          selectedCloser,
+          selectedOrigin
+        );
+        
         // Find perdas value from performance data (total team)
         const perdas = performance.find(item => item.closerName === 'Total Equipe')?.negociosPerdidos || 0;
         
@@ -200,6 +215,7 @@ const CloserPage: React.FC = () => {
         setSalesFunnelData(funnel);
         setCycleSalesData(cycleData);
         setLossReasonsData(lossReasons);
+        setNegotiations(negotiationsData);
         
         // Create sales progress data for selected month
         generateSalesProgressData();
@@ -213,10 +229,12 @@ const CloserPage: React.FC = () => {
         
         setHasData(hasAnyData);
         setIsLoading(false);
+        setLoadingNegotiations(false);
       } catch (error) {
         console.error("Error loading data:", error);
         toast.error("Erro ao carregar dados. Verifique os filtros ou tente novamente.");
         setIsLoading(false);
+        setLoadingNegotiations(false);
         setHasData(false);
       }
     };
@@ -624,6 +642,19 @@ const CloserPage: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Negotiations List */}
+          <Card className="shadow-md mt-6">
+            <CardHeader className="pb-2">
+              <CardTitle>Listagem de Negociações</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <NegotiationsList 
+                negotiations={negotiations}
+                isLoading={loadingNegotiations}
+              />
             </CardContent>
           </Card>
         </>
