@@ -1,13 +1,14 @@
+
 import { DateRange } from "react-day-picker";
 import { fetchFilteredData } from "./queryService";
-import { normalizeDateRange } from "./utils/dateUtils";
+import { normalizeDateRange, isDateInRange } from './utils/dateUtils';
 import { supabase } from "@/integrations/supabase/client";
 import { 
   fetchSdrMetaData,
   fetchCloserMetaData,
   fetchEmpresaMetaData
 } from './metaService';
-import { parseDate, isDateInRange } from './utils/dateUtils';
+import { parseDate } from './utils/dateUtils';
 
 // Fetch closer KPI data using Negociacoes table as primary source
 export const fetchCloserKpiData = async (
@@ -566,7 +567,10 @@ export const fetchCloserSalesCycleData = async (
 export const fetchNegotiations = async (
   dateRange?: DateRange,
   selectedCloser?: string,
-  selectedOrigin?: string
+  selectedOrigin?: string,
+  selectedStatus?: string,
+  selectedTemperature?: string,
+  closingDateRange?: DateRange
 ) => {
   try {
     const normalizedDateRange = normalizeDateRange(dateRange);
@@ -594,6 +598,47 @@ export const fetchNegotiations = async (
         return matches;
       });
       console.log(`Origin filter: before=${beforeFilter}, after=${negociacoesData.length}`);
+    }
+    
+    // Apply status filter if selected
+    if (selectedStatus && selectedStatus !== 'all') {
+      const beforeFilter = negociacoesData.length;
+      negociacoesData = negociacoesData.filter((row: any) => {
+        const status = row.STATUS ? String(row.STATUS).toLowerCase() : '';
+        const selectedValue = String(selectedStatus).toLowerCase();
+        return status === selectedValue;
+      });
+      console.log(`Status filter: before=${beforeFilter}, after=${negociacoesData.length}`);
+    }
+    
+    // Apply temperature filter if selected
+    if (selectedTemperature && selectedTemperature !== 'all') {
+      const beforeFilter = negociacoesData.length;
+      negociacoesData = negociacoesData.filter((row: any) => {
+        const temperatura = row.TEMPERATURA ? String(row.TEMPERATURA).toLowerCase() : '';
+        const selectedValue = String(selectedTemperature).toLowerCase();
+        return temperatura === selectedValue;
+      });
+      console.log(`Temperature filter: before=${beforeFilter}, after=${negociacoesData.length}`);
+    }
+    
+    // Apply closing date range filter if provided
+    if (closingDateRange && closingDateRange.from) {
+      const beforeFilter = negociacoesData.length;
+      const normalizedClosingDateRange = normalizeDateRange(closingDateRange);
+      
+      negociacoesData = negociacoesData.filter((row: any) => {
+        // Skip items without closing date
+        if (!row['DATA DO FEC.']) return false;
+        
+        try {
+          const closingDate = new Date(row['DATA DO FEC.']);
+          return isDateInRange(closingDate, normalizedClosingDateRange);
+        } catch (error) {
+          return false;
+        }
+      });
+      console.log(`Closing date filter: before=${beforeFilter}, after=${negociacoesData.length}`);
     }
     
     return negociacoesData;

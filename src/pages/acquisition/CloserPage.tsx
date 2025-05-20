@@ -17,6 +17,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
   BarChart,
   Bar,
   LineChart,
@@ -40,6 +46,8 @@ import {
   Percent,
   CalendarClock,
   XCircle,
+  ChevronDown,
+  Filter,
 } from "lucide-react";
 import {
   fetchCloserKpiData,
@@ -107,6 +115,12 @@ const CloserPage: React.FC = () => {
   const [selectedOrigin, setSelectedOrigin] = useState<string>("all");
   const [selectedMonth, setSelectedMonth] = useState<string>("may");
   
+  // Advanced filter states
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState<boolean>(false);
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [selectedTemperature, setSelectedTemperature] = useState<string>("all");
+  const [closingDateRange, setClosingDateRange] = useState<DateRange | undefined>(undefined);
+  
   // State for loading and no data situations
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [hasData, setHasData] = useState<boolean>(true);
@@ -139,7 +153,15 @@ const CloserPage: React.FC = () => {
     setDateRange(getDefaultDateRange());
     setSelectedCloser("all");
     setSelectedOrigin("all");
+    setSelectedStatus("all");
+    setSelectedTemperature("all");
+    setClosingDateRange(undefined);
     toast.success("Filtros redefinidos para valores padrão");
+  };
+
+  // Toggle advanced filters
+  const toggleAdvancedFilters = () => {
+    setAdvancedFiltersOpen(!advancedFiltersOpen);
   };
 
   // Load all data when filters change
@@ -192,11 +214,14 @@ const CloserPage: React.FC = () => {
           selectedOrigin
         );
         
-        // Load negotiations data
+        // Load negotiations data with advanced filters
         const negotiationsData = await fetchNegotiations(
           validDateRange,
           selectedCloser,
-          selectedOrigin
+          selectedOrigin,
+          selectedStatus,
+          selectedTemperature,
+          closingDateRange
         );
         
         // Find perdas value from performance data (total team)
@@ -240,7 +265,7 @@ const CloserPage: React.FC = () => {
     };
 
     loadData();
-  }, [dateRange, selectedCloser, selectedOrigin, selectedMonth]);
+  }, [dateRange, selectedCloser, selectedOrigin, selectedStatus, selectedTemperature, closingDateRange, selectedMonth]);
   
   // Generate sales progress data based on selected month
   const generateSalesProgressData = () => {
@@ -311,12 +336,12 @@ const CloserPage: React.FC = () => {
 
   return (
     <DashboardLayout title="Performance de Vendas (Closer)">
-      {/* Filters */}
+      {/* Basic Filters */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-2">
         <DateRangePicker
           dateRange={dateRange}
           onDateRangeChange={setDateRange}
-          label="Período"
+          label="Período de Início"
         />
         <div className="grid gap-2">
           <div className="text-sm font-medium">Closer</div>
@@ -357,8 +382,19 @@ const CloserPage: React.FC = () => {
         </div>
       </div>
       
-      {/* Clear Filters Button */}
-      <div className="flex justify-end mb-4">
+      {/* Advanced Filters Button */}
+      <div className="flex justify-between mb-4 items-center">
+        <Button 
+          onClick={toggleAdvancedFilters} 
+          variant="outline" 
+          size="sm" 
+          className="flex items-center gap-1"
+        >
+          <Filter className="h-4 w-4" />
+          Filtros Avançados
+          <ChevronDown className={`h-4 w-4 transform transition-transform ${advancedFiltersOpen ? 'rotate-180' : ''}`} />
+        </Button>
+        
         <Button 
           onClick={resetFilters} 
           variant="outline" 
@@ -369,6 +405,56 @@ const CloserPage: React.FC = () => {
           Limpar Filtros
         </Button>
       </div>
+      
+      {/* Advanced Filters Panel */}
+      {advancedFiltersOpen && (
+        <div className="bg-background rounded-md border p-4 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <DateRangePicker
+            dateRange={closingDateRange}
+            onDateRangeChange={setClosingDateRange}
+            label="Período de Fechamento (DATA DO FEC.)"
+          />
+          
+          <div className="grid gap-2">
+            <div className="text-sm font-medium">Status</div>
+            <Select 
+              value={selectedStatus} 
+              onValueChange={setSelectedStatus}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecionar Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Status</SelectItem>
+                <SelectItem value="Ganho">Ganho</SelectItem>
+                <SelectItem value="Perdido">Perdido</SelectItem>
+                <SelectItem value="Negociação">Negociação</SelectItem>
+                <SelectItem value="Follow Longo">Follow Longo</SelectItem>
+                <SelectItem value="Contrato Assinado">Contrato Assinado</SelectItem>
+                <SelectItem value="Contrato na Rua">Contrato na Rua</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="grid gap-2">
+            <div className="text-sm font-medium">Temperatura</div>
+            <Select 
+              value={selectedTemperature} 
+              onValueChange={setSelectedTemperature}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecionar Temperatura" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Temperaturas</SelectItem>
+                <SelectItem value="Quente">Quente</SelectItem>
+                <SelectItem value="Morno">Morno</SelectItem>
+                <SelectItem value="Frio">Frio</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
 
       {isLoading ? (
         <LoadingState />
