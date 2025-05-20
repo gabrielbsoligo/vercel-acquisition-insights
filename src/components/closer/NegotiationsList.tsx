@@ -33,12 +33,12 @@ interface Negotiation {
   PRODUTO: string;
   VALOR: number;
   STATUS: string;
-  DATA_DA_CALL: string;
+  "DATA DA CALL": string;
   CLOSER: string;
   ORIGEM: string;
-  DATA_DO_FEC?: string;
-  CURVA_DIAS?: number;
-  MOTIVOS_DE_PERDA?: string;
+  "DATA DO FEC."?: string;
+  "CURVA DIAS"?: number;
+  "MOTIVOS DE PERDA"?: string;
 }
 
 interface NegotiationsListProps {
@@ -212,9 +212,9 @@ export const NegotiationsList: React.FC<NegotiationsListProps> = ({
                         {negotiation.STATUS || '-'}
                       </span>
                     </TableCell>
-                    <TableCell>{formatDate(negotiation["DATA_DA_CALL"])}</TableCell>
-                    <TableCell>{formatDate(negotiation["DATA_DO_FEC"])}</TableCell>
-                    <TableCell>{negotiation["CURVA_DIAS"] || '-'}</TableCell>
+                    <TableCell>{formatDate(negotiation["DATA DA CALL"])}</TableCell>
+                    <TableCell>{formatDate(negotiation["DATA DO FEC."])}</TableCell>
+                    <TableCell>{negotiation["CURVA DIAS"] || '-'}</TableCell>
                     <TableCell>{negotiation.CLOSER || '-'}</TableCell>
                     <TableCell>{negotiation.ORIGEM || '-'}</TableCell>
                   </TableRow>
