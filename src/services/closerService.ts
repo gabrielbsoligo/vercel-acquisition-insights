@@ -1,4 +1,3 @@
-
 import { DateRange } from "react-day-picker";
 import { fetchFilteredData } from "./queryService";
 import { normalizeDateRange, isDateInRange } from './utils/dateUtils';
@@ -580,7 +579,7 @@ export const fetchNegotiations = async (
       'negociacoes', 
       normalizedDateRange,
       selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined,
-      'start'
+      'start' // This is the third argument that was missing
     );
     
     console.log(`Negotiations - Fetched ${negociacoesData.length} rows from negociacoes`);
