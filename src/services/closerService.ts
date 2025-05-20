@@ -579,7 +579,7 @@ export const fetchNegotiations = async (
       'negociacoes', 
       normalizedDateRange,
       selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined,
-      'start' // This is the third argument that was missing
+      'start' // This is the third argument that was missing - specifying to use 'DATA DA CALL' for filtering
     );
     
     console.log(`Negotiations - Fetched ${negociacoesData.length} rows from negociacoes`);
