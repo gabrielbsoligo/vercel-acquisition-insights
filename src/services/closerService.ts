@@ -632,7 +632,7 @@ export const fetchNegotiations = async (
         
         try {
           const closingDate = new Date(row['DATA DO FEC.']);
-          return isDateInRange(closingDate, normalizedClosingDateRange);
+          return isDateInRange(closingDate, normalizedClosingDateRange.from, normalizedClosingDateRange.to);
         } catch (error) {
           return false;
         }

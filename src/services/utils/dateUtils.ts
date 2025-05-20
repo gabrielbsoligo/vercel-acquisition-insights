@@ -1,4 +1,3 @@
-
 import { DateRange } from "react-day-picker";
 
 // Helper function to ensure DateRange has proper values
