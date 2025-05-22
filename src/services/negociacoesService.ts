@@ -9,10 +9,31 @@ import { normalizeDateRange, isDateInRange } from './utils/dateUtils';
  * @returns Filtered negociacoes data
  */
 export const fetchNegociacoesData = async (
-  dateRange: { from: Date, to: Date }
+  dateRange: { from: Date, to: Date },
+  additionalFilters?: Record<string, any>,
+  closingDateRange?: DateRange
 ) => {
   try {
-    const data = await fetchFilteredData('negociacoes', dateRange);
+    // Fetch data using the primary date range (DATA DA CALL)
+    const data = await fetchFilteredData('negociacoes', dateRange, additionalFilters);
+    
+    // Apply closing date range filter if provided
+    if (closingDateRange && closingDateRange.from) {
+      const normalizedClosingDateRange = normalizeDateRange(closingDateRange);
+      
+      return data.filter((row: any) => {
+        // Skip items without closing date
+        if (!row['DATA DO FEC.']) return false;
+        
+        try {
+          const closingDate = new Date(row['DATA DO FEC.']);
+          return isDateInRange(closingDate, normalizedClosingDateRange.from, normalizedClosingDateRange.to);
+        } catch (error) {
+          return false;
+        }
+      });
+    }
+    
     return data || [];
   } catch (error) {
     console.error('Error fetching negociacoes data:', error);

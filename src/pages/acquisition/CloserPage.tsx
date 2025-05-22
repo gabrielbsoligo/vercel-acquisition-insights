@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { DateRange } from "react-day-picker";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -178,40 +179,44 @@ const CloserPage: React.FC = () => {
           range: JSON.stringify(validDateRange)
         });
         
-        // Load KPI data
-        const reunioes = await fetchCloserKpiData('reunioesRealizadas', validDateRange, selectedCloser);
-        const vendas = await fetchCloserKpiData('vendas', validDateRange, selectedCloser);
-        const valorVendido = await fetchCloserKpiData('valorVendido', validDateRange, selectedCloser);
-        const ticketMedio = await fetchCloserKpiData('ticketMedio', validDateRange, selectedCloser);
-        const taxaConversao = await fetchCloserKpiData('taxaConversao', validDateRange, selectedCloser);
-        const cicloVendas = await fetchCloserKpiData('cicloVendas', validDateRange, selectedCloser);
+        // Load KPI data - now passing closingDateRange to all KPI fetches
+        const reunioes = await fetchCloserKpiData('reunioesRealizadas', validDateRange, selectedCloser, closingDateRange);
+        const vendas = await fetchCloserKpiData('vendas', validDateRange, selectedCloser, closingDateRange);
+        const valorVendido = await fetchCloserKpiData('valorVendido', validDateRange, selectedCloser, closingDateRange);
+        const ticketMedio = await fetchCloserKpiData('ticketMedio', validDateRange, selectedCloser, closingDateRange);
+        const taxaConversao = await fetchCloserKpiData('taxaConversao', validDateRange, selectedCloser, closingDateRange);
+        const cicloVendas = await fetchCloserKpiData('cicloVendas', validDateRange, selectedCloser, closingDateRange);
         
-        // Load performance data
+        // Load performance data - now passing closingDateRange
         const performance = await fetchCloserPerformanceData(
           validDateRange, 
           selectedCloser, 
-          selectedOrigin
+          selectedOrigin,
+          closingDateRange
         );
         
-        // Load sales funnel data
+        // Load sales funnel data - now passing closingDateRange
         const funnel = await fetchCloserSalesFunnelData(
           validDateRange, 
           selectedCloser, 
-          selectedOrigin
+          selectedOrigin,
+          closingDateRange
         );
         
-        // Load sales cycle data
+        // Load sales cycle data - now passing closingDateRange
         const cycleData = await fetchCloserSalesCycleData(
           validDateRange, 
           selectedCloser, 
-          selectedOrigin
+          selectedOrigin,
+          closingDateRange
         );
         
-        // Load loss reasons data
+        // Load loss reasons data - now passing closingDateRange
         const lossReasons = await fetchCloserLossReasonsData(
           validDateRange, 
           selectedCloser, 
-          selectedOrigin
+          selectedOrigin,
+          closingDateRange
         );
         
         // Load negotiations data with advanced filters

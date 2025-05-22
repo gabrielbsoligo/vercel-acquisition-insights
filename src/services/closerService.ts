@@ -9,27 +9,33 @@ import {
   fetchEmpresaMetaData
 } from './metaService';
 import { parseDate } from './utils/dateUtils';
+import { fetchNegociacoesData } from './negociacoesService';
 
 // Fetch closer KPI data using Negociacoes table as primary source for all metrics
 export const fetchCloserKpiData = async (
   kpiType: string, 
   dateRange?: DateRange, 
-  selectedCloser?: string
+  selectedCloser?: string,
+  closingDateRange?: DateRange
 ) => {
   try {
     console.log(`Fetching ${kpiType} KPI data for closer: ${selectedCloser || 'all'}`);
     const normalizedDateRange = normalizeDateRange(dateRange);
     console.log('Normalized date range:', normalizedDateRange);
     
-    // Fetch Negociacoes data for all metrics - explicitly use 'DATA DA CALL'
-    const negociacoesData = await fetchFilteredData(
-      'negociacoes', 
+    // Fetch Negociacoes data for all metrics - explicitly use 'DATA DA CALL' for initial filter
+    // but also apply closingDateRange filter if provided
+    const additionalFilters = selectedCloser && selectedCloser !== 'all' 
+      ? { CLOSER: selectedCloser } 
+      : undefined;
+    
+    const negociacoesData = await fetchNegociacoesData(
       normalizedDateRange,
-      selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined,
-      'start' // Explicitly use 'start' date column (DATA DA CALL)
+      additionalFilters,
+      closingDateRange
     );
     
-    console.log(`Fetched ${negociacoesData.length} rows from negociacoes`);
+    console.log(`Fetched ${negociacoesData.length} rows from negociacoes after all filters`);
     console.log('Sample data:', negociacoesData[0]);
     
     // Fetch meta data
@@ -181,7 +187,8 @@ export const fetchCloserKpiData = async (
 export const fetchCloserPerformanceData = async (
   dateRange?: DateRange,
   selectedCloser?: string,
-  selectedOrigin?: string
+  selectedOrigin?: string,
+  closingDateRange?: DateRange
 ) => {
   try {
     // Ensure we have a valid date range
@@ -189,16 +196,19 @@ export const fetchCloserPerformanceData = async (
     
     console.log('Performance data - Normalized date range:', normalizedDateRange);
     
-    // Fetch negotiations data - using 'DATA DA CALL' for filtering
-    const negociacoesData = await fetchFilteredData(
-      'negociacoes', 
+    // Apply filters based on selectedCloser
+    const additionalFilters = selectedCloser && selectedCloser !== 'all' 
+      ? { CLOSER: selectedCloser } 
+      : undefined;
+      
+    // Fetch negotiations data with filters including closingDateRange
+    const negociacoesData = await fetchNegociacoesData(
       normalizedDateRange,
-      selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined,
-      'start' // Use 'DATA DA CALL' for filtering
+      additionalFilters,
+      closingDateRange
     );
     
-    console.log(`Fetched ${negociacoesData.length} rows from negociacoes`);
-    console.log('Sample negotiations data:', negociacoesData.length > 0 ? negociacoesData[0] : 'No data');
+    console.log(`Fetched ${negociacoesData.length} rows from negociacoes after all filters`);
     
     // Apply origin filter if selected
     let filteredNegociacoes = negociacoesData;
@@ -334,11 +344,12 @@ export const fetchCloserPerformanceData = async (
   }
 };
 
-// Function for sales funnel data - only using DATA DA CALL for filtering
+// Function for sales funnel data - now also using closingDateRange
 export const fetchCloserSalesFunnelData = async (
   dateRange?: DateRange,
   selectedCloser?: string,
-  selectedOrigin?: string
+  selectedOrigin?: string,
+  closingDateRange?: DateRange
 ) => {
   try {
     const normalizedDateRange = normalizeDateRange(dateRange);
@@ -346,16 +357,18 @@ export const fetchCloserSalesFunnelData = async (
     console.log('Fetching sales funnel data with date range:');
     console.log('Date range:', normalizedDateRange);
     
-    // Fetch Negociacoes data with filters - using 'DATA DA CALL' (start)
-    let negociacoesData = await fetchFilteredData(
-      'negociacoes', 
+    // Fetch Negociacoes data with filters including closingDateRange
+    const additionalFilters = selectedCloser && selectedCloser !== 'all' 
+      ? { CLOSER: selectedCloser } 
+      : undefined;
+      
+    let negociacoesData = await fetchNegociacoesData(
       normalizedDateRange,
-      selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined,
-      'start'
+      additionalFilters,
+      closingDateRange
     );
     
-    console.log(`Fetched ${negociacoesData.length} rows from negociacoes`);
-    console.log('Sample negotiations data:', negociacoesData.length > 0 ? negociacoesData[0] : 'No data');
+    console.log(`Fetched ${negociacoesData.length} rows from negociacoes after all filters`);
     
     // Apply origin filter if selected
     if (selectedOrigin && selectedOrigin !== 'all') {
@@ -364,7 +377,6 @@ export const fetchCloserSalesFunnelData = async (
         // Make sure ORIGEM exists and do a case-insensitive comparison
         const origem = row.ORIGEM ? String(row.ORIGEM).toUpperCase() : '';
         const selectedValue = String(selectedOrigin).toUpperCase();
-        console.log(`Comparing origin: "${origem}" with selected: "${selectedValue}"`);
         return origem === selectedValue;
       });
       console.log(`Origin filter: before=${beforeFilter}, after=${negociacoesData.length}`);
@@ -397,21 +409,25 @@ export const fetchCloserSalesFunnelData = async (
   }
 };
 
-// Function for loss reasons data - only using DATA DA CALL for filtering
+// Function for loss reasons data - now also using closingDateRange
 export const fetchCloserLossReasonsData = async (
   dateRange?: DateRange,
   selectedCloser?: string,
-  selectedOrigin?: string
+  selectedOrigin?: string,
+  closingDateRange?: DateRange
 ) => {
   try {
     const normalizedDateRange = normalizeDateRange(dateRange);
     
-    // Fetch Negociacoes data with filters - using 'DATA DA CALL' (start)
-    let negociacoesData = await fetchFilteredData(
-      'negociacoes', 
+    // Fetch Negociacoes data with filters including closingDateRange
+    const additionalFilters = selectedCloser && selectedCloser !== 'all' 
+      ? { CLOSER: selectedCloser } 
+      : undefined;
+      
+    let negociacoesData = await fetchNegociacoesData(
       normalizedDateRange,
-      selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined,
-      'start'
+      additionalFilters,
+      closingDateRange
     );
     
     // Apply origin filter if selected
@@ -458,21 +474,25 @@ export const fetchCloserLossReasonsData = async (
   }
 };
 
-// Function for sales cycle data - only using DATA DA CALL for filtering
+// Function for sales cycle data - now also using closingDateRange
 export const fetchCloserSalesCycleData = async (
   dateRange?: DateRange,
   selectedCloser?: string,
-  selectedOrigin?: string
+  selectedOrigin?: string,
+  closingDateRange?: DateRange
 ) => {
   try {
     const normalizedDateRange = normalizeDateRange(dateRange);
     
-    // Fetch Negociacoes data with filters - using 'DATA DA CALL' (start)
-    let negociacoesData = await fetchFilteredData(
-      'negociacoes', 
+    // Fetch Negociacoes data with filters including closingDateRange
+    const additionalFilters = selectedCloser && selectedCloser !== 'all' 
+      ? { CLOSER: selectedCloser } 
+      : undefined;
+      
+    let negociacoesData = await fetchNegociacoesData(
       normalizedDateRange,
-      selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined,
-      'start'
+      additionalFilters,
+      closingDateRange
     );
     
     // Apply origin filter if selected
@@ -535,7 +555,7 @@ export const fetchCloserSalesCycleData = async (
   }
 };
 
-// Fetch negotiations based on filters - Using only DATA DA CALL for filtering
+// Fetch negotiations based on filters
 export const fetchNegotiations = async (
   dateRange?: DateRange,
   selectedCloser?: string,
@@ -547,16 +567,18 @@ export const fetchNegotiations = async (
   try {
     const normalizedDateRange = normalizeDateRange(dateRange);
     
-    // Fetch Negociacoes data with filters - using 'DATA DA CALL' (start)
-    let negociacoesData = await fetchFilteredData(
-      'negociacoes', 
+    // Fetch Negociacoes data with filters - using our new fetchNegociacoesData that handles closingDateRange
+    const additionalFilters = selectedCloser && selectedCloser !== 'all' 
+      ? { CLOSER: selectedCloser } 
+      : undefined;
+      
+    let negociacoesData = await fetchNegociacoesData(
       normalizedDateRange,
-      selectedCloser && selectedCloser !== 'all' ? { CLOSER: selectedCloser } : undefined,
-      'start' // This is the third argument that was missing - specifying to use 'DATA DA CALL' for filtering
+      additionalFilters,
+      closingDateRange
     );
     
-    console.log(`Negotiations - Fetched ${negociacoesData.length} rows from negociacoes`);
-    console.log('Sample data:', negociacoesData.length > 0 ? negociacoesData[0] : 'No data');
+    console.log(`Negotiations - Fetched ${negociacoesData.length} rows from negociacoes after date filters`);
     
     // Apply origin filter if selected
     if (selectedOrigin && selectedOrigin !== 'all') {
@@ -565,7 +587,6 @@ export const fetchNegotiations = async (
         // Make sure ORIGEM exists and do a case-insensitive comparison
         const origem = row.ORIGEM ? String(row.ORIGEM).toUpperCase() : '';
         const selectedValue = String(selectedOrigin).toUpperCase();
-        console.log(`Comparing origin: "${origem}" with selected: "${selectedValue}"`);
         const matches = origem === selectedValue;
         return matches;
       });
@@ -592,25 +613,6 @@ export const fetchNegotiations = async (
         return temperatura === selectedValue;
       });
       console.log(`Temperature filter: before=${beforeFilter}, after=${negociacoesData.length}`);
-    }
-    
-    // Apply closing date range filter if provided
-    if (closingDateRange && closingDateRange.from) {
-      const beforeFilter = negociacoesData.length;
-      const normalizedClosingDateRange = normalizeDateRange(closingDateRange);
-      
-      negociacoesData = negociacoesData.filter((row: any) => {
-        // Skip items without closing date
-        if (!row['DATA DO FEC.']) return false;
-        
-        try {
-          const closingDate = new Date(row['DATA DO FEC.']);
-          return isDateInRange(closingDate, normalizedClosingDateRange.from, normalizedClosingDateRange.to);
-        } catch (error) {
-          return false;
-        }
-      });
-      console.log(`Closing date filter: before=${beforeFilter}, after=${negociacoesData.length}`);
     }
     
     return negociacoesData;
