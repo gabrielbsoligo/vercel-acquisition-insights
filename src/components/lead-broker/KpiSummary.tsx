@@ -23,9 +23,13 @@ interface KpiSummaryProps {
     roas: number;
     ticketMedio: number;
   };
+  activeFilters?: string[];
 }
 
-export const KpiSummary: React.FC<KpiSummaryProps> = ({ summaryKPIs }) => {
+export const KpiSummary: React.FC<KpiSummaryProps> = ({ 
+  summaryKPIs, 
+  activeFilters = [] 
+}) => {
   return (
     <>
       {/* KPI Cards - Row 1 */}
@@ -35,6 +39,7 @@ export const KpiSummary: React.FC<KpiSummaryProps> = ({ summaryKPIs }) => {
           value={`R$ ${summaryKPIs.investimento.toLocaleString('pt-BR')}`}
           icon={DollarSign}
           iconColor="bg-brandRed"
+          note={activeFilters.length > 0 ? `Filtros: ${activeFilters.join(', ')}` : undefined}
         />
         <KpiCard 
           title="Leads Comprados (Broker)" 

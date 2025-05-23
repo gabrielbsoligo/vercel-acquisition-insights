@@ -104,6 +104,23 @@ export const fetchFilteredData = async (
     }
     
     console.log(`Fetched ${data?.length || 0} records from ${supabaseTableName}`);
+    
+    // Debug origins if this is Negociacoes table
+    if (supabaseTableName === "Negociacoes") {
+      const origins = data ? [...new Set(data.map(item => item.ORIGEM))] : [];
+      console.log(`DEBUG - ORIGINS in result: ${JSON.stringify(origins)}`);
+      console.log(`DEBUG - Count by origin:`, data?.reduce((acc, item) => {
+        acc[item.ORIGEM || 'undefined'] = (acc[item.ORIGEM || 'undefined'] || 0) + 1;
+        return acc;
+      }, {}));
+      
+      // Debug lead broker filter specifically
+      if (additionalFilters && additionalFilters.ORIGEM === 'LEADBROKER') {
+        const leadBrokerCount = data?.filter(item => item.ORIGEM === 'LEADBROKER').length || 0;
+        console.log(`DEBUG - LEADBROKER count in results: ${leadBrokerCount} of ${data?.length || 0}`);
+      }
+    }
+    
     if (data && data.length > 0) {
       console.log('Sample data:', data[0]);
     } else {

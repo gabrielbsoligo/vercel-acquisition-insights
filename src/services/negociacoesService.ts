@@ -32,9 +32,24 @@ export const fetchNegociacoesData = async (
       console.log('Cleaned filters for negociacoes:', cleanedFilters);
     }
 
+    // Log exact origin filter being used
+    if (additionalFilters && additionalFilters.ORIGEM) {
+      console.log(`DEBUG - Origin filter being applied: ${additionalFilters.ORIGEM}`);
+    }
+
     // Fetch data using the primary date range (DATA DA CALL)
     const data = await fetchFilteredData('negociacoes', dateRange, cleanedFilters);
     console.log(`NegociacoesService: Fetched ${data?.length || 0} initial records`);
+    
+    // Debug origin data before applying closing date range
+    if (data && data.length > 0) {
+      const origins = [...new Set(data.map(item => item.ORIGEM))];
+      console.log(`DEBUG - Origins before closing date filter: ${JSON.stringify(origins)}`);
+      console.log(`DEBUG - Count by origin before closing filter:`, data.reduce((acc, item) => {
+        acc[item.ORIGEM || 'undefined'] = (acc[item.ORIGEM || 'undefined'] || 0) + 1;
+        return acc;
+      }, {}));
+    }
     
     // Apply closing date range filter if provided
     if (closingDateRange && closingDateRange.from) {
@@ -58,6 +73,17 @@ export const fetchNegociacoesData = async (
       });
       
       console.log(`After closing date filter: ${filteredByClosingDate.length} records (from ${beforeFilter})`);
+      
+      // Debug origin data after applying closing date range
+      if (filteredByClosingDate.length > 0) {
+        const origins = [...new Set(filteredByClosingDate.map(item => item.ORIGEM))];
+        console.log(`DEBUG - Origins after closing date filter: ${JSON.stringify(origins)}`);
+        console.log(`DEBUG - Count by origin after closing filter:`, filteredByClosingDate.reduce((acc, item) => {
+          acc[item.ORIGEM || 'undefined'] = (acc[item.ORIGEM || 'undefined'] || 0) + 1;
+          return acc;
+        }, {}));
+      }
+      
       return filteredByClosingDate;
     }
     

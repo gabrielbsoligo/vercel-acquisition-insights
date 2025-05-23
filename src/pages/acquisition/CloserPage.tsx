@@ -188,6 +188,7 @@ const CloserPage: React.FC = () => {
         
         if (selectedOrigin !== 'all') {
           additionalFilters.ORIGEM = selectedOrigin;
+          console.log(`DEBUG PAGE - Setting origin filter: "${selectedOrigin}"`);
         }
         
         if (selectedStatus !== 'all') {
@@ -199,6 +200,11 @@ const CloserPage: React.FC = () => {
         }
         
         console.log("Applying filters:", additionalFilters);
+        
+        // Debug the exact filters being passed
+        if (additionalFilters.ORIGEM) {
+          console.log(`DEBUG PAGE - Origin filter before KPI fetch: "${additionalFilters.ORIGEM}"`);
+        }
         
         // Load KPI data with consistent filtering
         const reunioes = await fetchCloserKpiData('reunioesRealizadas', validDateRange, additionalFilters, closingDateRange);

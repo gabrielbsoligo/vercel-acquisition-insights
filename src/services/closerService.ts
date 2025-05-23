@@ -22,6 +22,11 @@ export const fetchCloserKpiData = async (
     const normalizedDateRange = normalizeDateRange(dateRange);
     console.log('Normalized date range for KPI fetch:', normalizedDateRange);
     
+    // Debug origin filter if present
+    if (additionalFilters && additionalFilters.ORIGEM) {
+      console.log(`DEBUG KPI - Origin filter value: "${additionalFilters.ORIGEM}"`);
+    }
+    
     // Fetch Negociacoes data for all metrics
     const negociacoesData = await fetchNegociacoesData(
       normalizedDateRange,
@@ -30,6 +35,16 @@ export const fetchCloserKpiData = async (
     );
     
     console.log(`KPI Fetch: Got ${negociacoesData.length} rows from negociacoes after all filters`);
+    
+    // Debug origins in the fetched data
+    if (negociacoesData && negociacoesData.length > 0) {
+      const origins = [...new Set(negociacoesData.map(item => item.ORIGEM))];
+      console.log(`DEBUG KPI - Origins in data: ${JSON.stringify(origins)}`);
+      console.log(`DEBUG KPI - Count by origin:`, negociacoesData.reduce((acc, item) => {
+        acc[item.ORIGEM || 'undefined'] = (acc[item.ORIGEM || 'undefined'] || 0) + 1;
+        return acc;
+      }, {}));
+    }
     
     if (negociacoesData.length > 0) {
       console.log('KPI Fetch: First record:', negociacoesData[0]);
