@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { DateRange } from "react-day-picker";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -179,6 +178,9 @@ const CloserPage: React.FC = () => {
           range: JSON.stringify(validDateRange)
         });
         
+        // Prepare additional filters for origin
+        const originFilter = selectedOrigin !== 'all' ? { ORIGEM: selectedOrigin } : undefined;
+        
         // Load KPI data - now passing closingDateRange to all KPI fetches
         const reunioes = await fetchCloserKpiData('reunioesRealizadas', validDateRange, selectedCloser, closingDateRange);
         const vendas = await fetchCloserKpiData('vendas', validDateRange, selectedCloser, closingDateRange);
@@ -187,7 +189,7 @@ const CloserPage: React.FC = () => {
         const taxaConversao = await fetchCloserKpiData('taxaConversao', validDateRange, selectedCloser, closingDateRange);
         const cicloVendas = await fetchCloserKpiData('cicloVendas', validDateRange, selectedCloser, closingDateRange);
         
-        // Load performance data - now passing closingDateRange
+        // Load performance data - now passing closingDateRange and originFilter
         const performance = await fetchCloserPerformanceData(
           validDateRange, 
           selectedCloser, 
@@ -195,7 +197,7 @@ const CloserPage: React.FC = () => {
           closingDateRange
         );
         
-        // Load sales funnel data - now passing closingDateRange
+        // Load sales funnel data - now passing closingDateRange and originFilter
         const funnel = await fetchCloserSalesFunnelData(
           validDateRange, 
           selectedCloser, 
@@ -203,7 +205,7 @@ const CloserPage: React.FC = () => {
           closingDateRange
         );
         
-        // Load sales cycle data - now passing closingDateRange
+        // Load sales cycle data - now passing closingDateRange and originFilter
         const cycleData = await fetchCloserSalesCycleData(
           validDateRange, 
           selectedCloser, 
@@ -211,7 +213,7 @@ const CloserPage: React.FC = () => {
           closingDateRange
         );
         
-        // Load loss reasons data - now passing closingDateRange
+        // Load loss reasons data - now passing closingDateRange and originFilter
         const lossReasons = await fetchCloserLossReasonsData(
           validDateRange, 
           selectedCloser, 

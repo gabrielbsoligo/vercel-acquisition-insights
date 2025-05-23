@@ -1,4 +1,3 @@
-
 import { DateRange } from "react-day-picker";
 import { fetchFilteredData } from "./queryService";
 import { normalizeDateRange, isDateInRange } from './utils/dateUtils';
@@ -555,69 +554,60 @@ export const fetchCloserSalesCycleData = async (
   }
 };
 
-// Fetch negotiations based on filters
+/**
+ * Fetches negotiation data based on various filters
+ */
 export const fetchNegotiations = async (
-  dateRange?: DateRange,
-  selectedCloser?: string,
-  selectedOrigin?: string,
-  selectedStatus?: string,
-  selectedTemperature?: string,
-  closingDateRange?: DateRange
+  dateRange: DateRange | undefined,
+  selectedCloser: string,
+  selectedOrigin: string,
+  selectedStatus: string,
+  selectedTemperature: string,
+  closingDateRange: DateRange | undefined
 ) => {
   try {
-    const normalizedDateRange = normalizeDateRange(dateRange);
+    const additionalFilters: Record<string, any> = {};
     
-    // Fetch Negociacoes data with filters - using our new fetchNegociacoesData that handles closingDateRange
-    const additionalFilters = selectedCloser && selectedCloser !== 'all' 
-      ? { CLOSER: selectedCloser } 
-      : undefined;
-      
-    let negociacoesData = await fetchNegociacoesData(
-      normalizedDateRange,
+    // Add selected closer filter if not 'all'
+    if (selectedCloser !== 'all') {
+      additionalFilters.CLOSER = selectedCloser;
+    }
+    
+    // Add selected origin filter if not 'all'
+    if (selectedOrigin !== 'all') {
+      additionalFilters.ORIGEM = selectedOrigin;
+    }
+    
+    // Add selected status filter if not 'all'
+    if (selectedStatus !== 'all') {
+      additionalFilters.STATUS = selectedStatus;
+    }
+    
+    // Add selected temperature filter if not 'all'
+    if (selectedTemperature !== 'all') {
+      additionalFilters.TEMPERATURA = selectedTemperature;
+    }
+    
+    console.log("Fetching negotiations with filters:", additionalFilters);
+    
+    // Fetch negotiations with filters
+    const negotiations = await fetchNegociacoesData(
+      normalizeDateRange(dateRange), 
       additionalFilters,
       closingDateRange
     );
     
-    console.log(`Negotiations - Fetched ${negociacoesData.length} rows from negociacoes after date filters`);
+    console.log(`Fetched ${negotiations.length} rows from negociacoes after all filters`);
     
-    // Apply origin filter if selected
-    if (selectedOrigin && selectedOrigin !== 'all') {
-      const beforeFilter = negociacoesData.length;
-      negociacoesData = negociacoesData.filter((row: any) => {
-        // Make sure ORIGEM exists and do a case-insensitive comparison
-        const origem = row.ORIGEM ? String(row.ORIGEM).toUpperCase() : '';
-        const selectedValue = String(selectedOrigin).toUpperCase();
-        const matches = origem === selectedValue;
-        return matches;
-      });
-      console.log(`Origin filter: before=${beforeFilter}, after=${negociacoesData.length}`);
+    // For debugging origin filter specifically
+    if (selectedOrigin !== 'all') {
+      const beforeFilter = await fetchNegociacoesData(normalizeDateRange(dateRange), {});
+      console.log(`Origin filter: before=${beforeFilter.length}, after=${negotiations.length}`);
     }
     
-    // Apply status filter if selected
-    if (selectedStatus && selectedStatus !== 'all') {
-      const beforeFilter = negociacoesData.length;
-      negociacoesData = negociacoesData.filter((row: any) => {
-        const status = row.STATUS ? String(row.STATUS).toLowerCase() : '';
-        const selectedValue = String(selectedStatus).toLowerCase();
-        return status === selectedValue;
-      });
-      console.log(`Status filter: before=${beforeFilter}, after=${negociacoesData.length}`);
-    }
-    
-    // Apply temperature filter if selected
-    if (selectedTemperature && selectedTemperature !== 'all') {
-      const beforeFilter = negociacoesData.length;
-      negociacoesData = negociacoesData.filter((row: any) => {
-        const temperatura = row.TEMPERATURA ? String(row.TEMPERATURA).toLowerCase() : '';
-        const selectedValue = String(selectedTemperature).toLowerCase();
-        return temperatura === selectedValue;
-      });
-      console.log(`Temperature filter: before=${beforeFilter}, after=${negociacoesData.length}`);
-    }
-    
-    return negociacoesData;
+    return negotiations;
   } catch (error) {
-    console.error('Error fetching negotiations data:', error);
+    console.error('Error fetching negotiations:', error);
     return [];
   }
 };

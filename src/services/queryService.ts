@@ -53,6 +53,8 @@ export const fetchFilteredData = async (
       console.log('Additional filters:', additionalFilters);
       Object.entries(additionalFilters).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
+          console.log(`Applying filter: ${key} = ${value}`);
+          
           // Check if the key includes special operators (_gte, _lte, etc.)
           if (key.includes('_gte')) {
             const actualKey = key.split('_gte')[0];
