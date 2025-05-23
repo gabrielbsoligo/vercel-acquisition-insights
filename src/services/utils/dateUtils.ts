@@ -1,3 +1,4 @@
+
 import { DateRange } from "react-day-picker";
 
 // Helper function to ensure DateRange has proper values
@@ -31,21 +32,32 @@ export const normalizeDateRange = (dateRange?: DateRange): { from: Date; to: Dat
  * @returns A Date object
  */
 export const parseDate = (dateString: string): Date => {
-  // Support for both DD/MM/YYYY and YYYY-MM-DD formats
-  const parts = dateString.split(/[\/\-]/);
+  if (!dateString) return new Date();
   
-  if (parts.length !== 3) {
-    console.warn(`Invalid date format: ${dateString}`);
-    return new Date(); // Return current date if format is invalid
+  try {
+    // Support for YYYY-MM-DD format (ISO)
+    const isoParts = dateString.split('-');
+    if (isoParts.length === 3) {
+      return new Date(Number(isoParts[0]), Number(isoParts[1]) - 1, Number(isoParts[2]));
+    }
+    
+    // Support for DD/MM/YYYY format (BR)
+    const brParts = dateString.split('/');
+    if (brParts.length === 3) {
+      return new Date(Number(brParts[2]), Number(brParts[1]) - 1, Number(brParts[0]));
+    }
+    
+    // Last resort - try standard JS Date parsing
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      console.warn(`Invalid date format: ${dateString}`);
+      return new Date(); // Return current date if format is invalid
+    }
+    return date;
+  } catch (error) {
+    console.error(`Error parsing date: ${dateString}`, error);
+    return new Date(); // Return current date if parsing fails
   }
-  
-  // Check if first part is a year (YYYY-MM-DD format)
-  if (parts[0].length === 4) {
-    return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-  }
-  
-  // Otherwise assume DD/MM/YYYY format
-  return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
 };
 
 /**

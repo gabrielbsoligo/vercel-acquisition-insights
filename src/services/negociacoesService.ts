@@ -1,7 +1,7 @@
 
 import { DateRange } from "react-day-picker";
 import { fetchFilteredData } from './queryService';
-import { normalizeDateRange, isDateInRange } from './utils/dateUtils';
+import { normalizeDateRange, isDateInRange, parseDate } from './utils/dateUtils';
 
 /**
  * Fetches negociacoes data based on date range
@@ -26,9 +26,11 @@ export const fetchNegociacoesData = async (
         if (!row['DATA DO FEC.']) return false;
         
         try {
-          const closingDate = new Date(row['DATA DO FEC.']);
+          // Parse the closing date using our improved parsing function
+          const closingDate = parseDate(row['DATA DO FEC.']);
           return isDateInRange(closingDate, normalizedClosingDateRange.from, normalizedClosingDateRange.to);
         } catch (error) {
+          console.error(`Error filtering by closing date for row:`, row, error);
           return false;
         }
       });

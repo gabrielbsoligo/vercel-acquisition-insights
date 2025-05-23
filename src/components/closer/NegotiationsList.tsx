@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -98,13 +97,36 @@ export const NegotiationsList: React.FC<NegotiationsListProps> = ({
     setCurrentPage(1); // Reset to first page when changing items per page
   };
 
-  // Format date for display
+  // Format date for display - Fixed to handle timezone issues
   const formatDate = (dateString?: string) => {
     if (!dateString) return "-";
     try {
+      // Handle ISO format dates (YYYY-MM-DD)
+      const parts = dateString.split('-');
+      if (parts.length === 3) {
+        // Create date using year, month, day to avoid timezone adjustments
+        // Month is 0-indexed in JavaScript Date
+        const date = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        return date.toLocaleDateString('pt-BR');
+      }
+      
+      // Handle Brazilian format dates (DD/MM/YYYY)
+      const brParts = dateString.split('/');
+      if (brParts.length === 3) {
+        const date = new Date(
+          Number(brParts[2]), // year
+          Number(brParts[1]) - 1, // month (0-indexed)
+          Number(brParts[0]) // day
+        );
+        return date.toLocaleDateString('pt-BR');
+      }
+      
+      // Fallback for other formats
       const date = new Date(dateString);
+      console.log(`Parsing date: ${dateString} -> ${date.toLocaleDateString('pt-BR')}`);
       return date.toLocaleDateString('pt-BR');
     } catch (error) {
+      console.error(`Error formatting date: ${dateString}`, error);
       return dateString;
     }
   };
