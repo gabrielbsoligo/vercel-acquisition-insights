@@ -50,9 +50,21 @@ export const fetchFilteredData = async (
     
     // Add any additional filters
     if (additionalFilters) {
-      console.log('Additional filters:', additionalFilters);
-      Object.entries(additionalFilters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
+      const cleanedFilters = { ...additionalFilters };
+      
+      // Remove any undefined, null, or 'all' values from filters
+      Object.entries(cleanedFilters).forEach(([key, value]) => {
+        if (value === undefined || value === null || value === 'all') {
+          console.log(`Removing filter: ${key} = ${value}`);
+          delete cleanedFilters[key];
+        }
+      });
+      
+      console.log('Additional filters after cleaning:', cleanedFilters);
+      
+      // Apply remaining filters
+      Object.entries(cleanedFilters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== 'all') {
           console.log(`Applying filter: ${key} = ${value}`);
           
           // Check if the key includes special operators (_gte, _lte, etc.)
@@ -76,9 +88,6 @@ export const fetchFilteredData = async (
             if (Array.isArray(value)) {
               query = query.in(actualKey, value);
             }
-          } else if (value === 'all') {
-            console.log(`Skipping filter for ${key} because value is 'all'`);
-            // Skip filtering for 'all' values
           } else {
             query = query.eq(key, value);
           }

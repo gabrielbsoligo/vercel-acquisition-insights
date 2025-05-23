@@ -178,66 +178,71 @@ const CloserPage: React.FC = () => {
           range: JSON.stringify(validDateRange)
         });
         
-        // Normalize selected filters to ensure 'all' values are handled correctly
-        const normalizedCloser = selectedCloser === 'all' ? undefined : selectedCloser;
-        const normalizedOrigin = selectedOrigin === 'all' ? undefined : selectedOrigin;
-        const normalizedStatus = selectedStatus === 'all' ? undefined : selectedStatus;
-        const normalizedTemperature = selectedTemperature === 'all' ? undefined : selectedTemperature;
+        // Create an additionalFilters object for consistent filtering
+        const additionalFilters: Record<string, any> = {};
         
-        console.log("Applying filters:", {
-          closer: normalizedCloser || 'all',
-          origin: normalizedOrigin || 'all',
-          status: normalizedStatus || 'all',
-          temperature: normalizedTemperature || 'all'
-        });
+        // Only add filters if they're not 'all'
+        if (selectedCloser !== 'all') {
+          additionalFilters.CLOSER = selectedCloser;
+        }
         
-        // Load KPI data - now passing closingDateRange to all KPI fetches
-        const reunioes = await fetchCloserKpiData('reunioesRealizadas', validDateRange, normalizedCloser, closingDateRange);
-        const vendas = await fetchCloserKpiData('vendas', validDateRange, normalizedCloser, closingDateRange);
-        const valorVendido = await fetchCloserKpiData('valorVendido', validDateRange, normalizedCloser, closingDateRange);
-        const ticketMedio = await fetchCloserKpiData('ticketMedio', validDateRange, normalizedCloser, closingDateRange);
-        const taxaConversao = await fetchCloserKpiData('taxaConversao', validDateRange, normalizedCloser, closingDateRange);
-        const cicloVendas = await fetchCloserKpiData('cicloVendas', validDateRange, normalizedCloser, closingDateRange);
+        if (selectedOrigin !== 'all') {
+          additionalFilters.ORIGEM = selectedOrigin;
+        }
         
-        // Load performance data - now passing closingDateRange and normalizedOrigin
+        if (selectedStatus !== 'all') {
+          additionalFilters.STATUS = selectedStatus;
+        }
+        
+        if (selectedTemperature !== 'all') {
+          additionalFilters.TEMPERATURA = selectedTemperature;
+        }
+        
+        console.log("Applying filters:", additionalFilters);
+        
+        // Load KPI data with consistent filtering
+        const reunioes = await fetchCloserKpiData('reunioesRealizadas', validDateRange, additionalFilters, closingDateRange);
+        const vendas = await fetchCloserKpiData('vendas', validDateRange, additionalFilters, closingDateRange);
+        const valorVendido = await fetchCloserKpiData('valorVendido', validDateRange, additionalFilters, closingDateRange);
+        const ticketMedio = await fetchCloserKpiData('ticketMedio', validDateRange, additionalFilters, closingDateRange);
+        const taxaConversao = await fetchCloserKpiData('taxaConversao', validDateRange, additionalFilters, closingDateRange);
+        const cicloVendas = await fetchCloserKpiData('cicloVendas', validDateRange, additionalFilters, closingDateRange);
+        
+        // Load performance data with consistent filtering
         const performance = await fetchCloserPerformanceData(
           validDateRange, 
-          normalizedCloser, 
-          normalizedOrigin,
+          additionalFilters,
           closingDateRange
         );
         
-        // Load sales funnel data - now passing closingDateRange and normalizedOrigin
+        // Load sales funnel data with consistent filtering
         const funnel = await fetchCloserSalesFunnelData(
           validDateRange, 
-          normalizedCloser, 
-          normalizedOrigin,
+          additionalFilters,
           closingDateRange
         );
         
-        // Load sales cycle data - now passing closingDateRange and normalizedOrigin
+        // Load sales cycle data with consistent filtering
         const cycleData = await fetchCloserSalesCycleData(
           validDateRange, 
-          normalizedCloser, 
-          normalizedOrigin,
+          additionalFilters,
           closingDateRange
         );
         
-        // Load loss reasons data - now passing closingDateRange and normalizedOrigin
+        // Load loss reasons data with consistent filtering
         const lossReasons = await fetchCloserLossReasonsData(
           validDateRange, 
-          normalizedCloser, 
-          normalizedOrigin,
+          additionalFilters,
           closingDateRange
         );
         
-        // Load negotiations data with advanced filters
+        // Load negotiations data with the same filters
         const negotiationsData = await fetchNegotiations(
           validDateRange,
-          normalizedCloser,
-          normalizedOrigin,
-          normalizedStatus,
-          normalizedTemperature,
+          selectedCloser,
+          selectedOrigin,
+          selectedStatus,
+          selectedTemperature,
           closingDateRange
         );
         
