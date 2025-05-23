@@ -14,26 +14,51 @@ export const fetchNegociacoesData = async (
   closingDateRange?: DateRange
 ) => {
   try {
+    // Ensure any 'all' values are removed from filters
+    const cleanedFilters = additionalFilters ? {...additionalFilters} : {};
+    
+    // Remove any 'all' values from filters as they should be treated as no filter
+    Object.entries(cleanedFilters).forEach(([key, value]) => {
+      if (value === 'all') {
+        console.log(`Removing '${key}' from filters because value is 'all'`);
+        delete cleanedFilters[key];
+      }
+    });
+    
+    if (Object.keys(cleanedFilters).length > 0) {
+      console.log('Cleaned filters for negociacoes:', cleanedFilters);
+    }
+
     // Fetch data using the primary date range (DATA DA CALL)
-    const data = await fetchFilteredData('negociacoes', dateRange, additionalFilters);
+    const data = await fetchFilteredData('negociacoes', dateRange, cleanedFilters);
+    console.log(`NegociacoesService: Fetched ${data?.length || 0} initial records`);
     
     // Apply closing date range filter if provided
     if (closingDateRange && closingDateRange.from) {
       const normalizedClosingDateRange = normalizeDateRange(closingDateRange);
+      console.log(`Applying closing date filter: ${normalizedClosingDateRange.from.toISOString()} to ${normalizedClosingDateRange.to.toISOString()}`);
       
-      return data.filter((row: any) => {
+      const filteredByClosingDate = data.filter((row: any) => {
         // Skip items without closing date
         if (!row['DATA DO FEC.']) return false;
         
         try {
           // Parse the closing date using our improved parsing function
           const closingDate = parseDate(row['DATA DO FEC.']);
-          return isDateInRange(closingDate, normalizedClosingDateRange.from, normalizedClosingDateRange.to);
+          const isInRange = isDateInRange(closingDate, normalizedClosingDateRange.from, normalizedClosingDateRange.to);
+          
+          if (isInRange) {
+            return true;
+          }
+          return false;
         } catch (error) {
           console.error(`Error filtering by closing date for row:`, row, error);
           return false;
         }
       });
+      
+      console.log(`After closing date filter: ${filteredByClosingDate.length} records (from ${data.length})`);
+      return filteredByClosingDate;
     }
     
     return data || [];

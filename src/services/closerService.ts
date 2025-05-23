@@ -1,3 +1,4 @@
+
 import { DateRange } from "react-day-picker";
 import { fetchFilteredData } from "./queryService";
 import { normalizeDateRange, isDateInRange } from './utils/dateUtils';
@@ -20,7 +21,7 @@ export const fetchCloserKpiData = async (
   try {
     console.log(`Fetching ${kpiType} KPI data for closer: ${selectedCloser || 'all'}`);
     const normalizedDateRange = normalizeDateRange(dateRange);
-    console.log('Normalized date range:', normalizedDateRange);
+    console.log('Normalized date range for KPI fetch:', normalizedDateRange);
     
     // Fetch Negociacoes data for all metrics - explicitly use 'DATA DA CALL' for initial filter
     // but also apply closingDateRange filter if provided
@@ -28,14 +29,19 @@ export const fetchCloserKpiData = async (
       ? { CLOSER: selectedCloser } 
       : undefined;
     
+    console.log('KPI additionalFilters:', additionalFilters);
+    
     const negociacoesData = await fetchNegociacoesData(
       normalizedDateRange,
       additionalFilters,
       closingDateRange
     );
     
-    console.log(`Fetched ${negociacoesData.length} rows from negociacoes after all filters`);
-    console.log('Sample data:', negociacoesData[0]);
+    console.log(`KPI Fetch: Got ${negociacoesData.length} rows from negociacoes after all filters`);
+    
+    if (negociacoesData.length > 0) {
+      console.log('KPI Fetch: First record:', negociacoesData[0]);
+    }
     
     // Fetch meta data
     const closerMetaData = await fetchCloserMetaData();
@@ -48,6 +54,7 @@ export const fetchCloserKpiData = async (
       case 'reunioesRealizadas':
         // Count all negotiations as initiated deals (reunioes realizadas)
         valorRealizado = negociacoesData.length;
+        console.log(`KPI ${kpiType} calculation: counting all ${negociacoesData.length} negotiations`);
         break;
         
       case 'vendas':
@@ -58,6 +65,7 @@ export const fetchCloserKpiData = async (
           row.STATUS === 'Contrato Assinado' || 
           row.STATUS === 'Contrato na Rua'
         ).length;
+        console.log(`KPI ${kpiType} calculation: found ${valorRealizado} vendas with status "Ganho/Finalizado/Contrato Assinado/Contrato na Rua"`);
         break;
         
       case 'taxaConversao': {
@@ -73,14 +81,20 @@ export const fetchCloserKpiData = async (
         ).length;
           
         valorRealizado = totalReunioes > 0 ? (totalVendas / totalReunioes) * 100 : 0;
+        console.log(`KPI ${kpiType} calculation: ${totalVendas} vendas / ${totalReunioes} reunioes = ${valorRealizado.toFixed(2)}%`);
         break;
       }
       
       case 'indicacoesColetadas':
         // Count negotiation entries with ORIGEM = "INDICAÇÃO"
-        valorRealizado = negociacoesData.filter((row: any) => 
-          (row.ORIGEM || '').toUpperCase() === 'INDICAÇÃO'
-        ).length;
+        valorRealizado = negociacoesData.filter((row: any) => {
+          // Make sure ORIGEM exists and do a case-insensitive comparison
+          const origem = row.ORIGEM ? String(row.ORIGEM).toUpperCase() : '';
+          const result = origem === 'INDICAÇÃO';
+          console.log(`Comparing KPI ${kpiType} ORIGEM: "${origem}" === "INDICAÇÃO" = ${result}`);
+          return result;
+        }).length;
+        console.log(`KPI ${kpiType} calculation: found ${valorRealizado} with ORIGEM = "INDICAÇÃO"`);
         break;
         
       case 'valorVendido':
@@ -93,6 +107,7 @@ export const fetchCloserKpiData = async (
             row.STATUS === 'Contrato na Rua'
           )
           .reduce((sum: number, row: any) => sum + (row.VALOR || 0), 0);
+        console.log(`KPI ${kpiType} calculation: sum of VALOR for won deals = ${valorRealizado}`);
         break;
         
       case 'ticketMedio': {
@@ -105,6 +120,7 @@ export const fetchCloserKpiData = async (
         );
         const totalVendido = vendasGanhas.reduce((sum: number, row: any) => sum + (row.VALOR || 0), 0);
         valorRealizado = vendasGanhas.length > 0 ? totalVendido / vendasGanhas.length : 0;
+        console.log(`KPI ${kpiType} calculation: ${totalVendido} / ${vendasGanhas.length} vendas = ${valorRealizado}`);
         break;
       }
       
@@ -120,6 +136,7 @@ export const fetchCloserKpiData = async (
         );
         const totalDiasCiclo = vendasFinalizadas.reduce((sum: number, row: any) => sum + (row['CURVA DIAS'] || 0), 0);
         valorRealizado = vendasFinalizadas.length > 0 ? totalDiasCiclo / vendasFinalizadas.length : 0;
+        console.log(`KPI ${kpiType} calculation: ${totalDiasCiclo} dias / ${vendasFinalizadas.length} vendas = ${valorRealizado}`);
         break;
       }
       
@@ -161,6 +178,11 @@ export const fetchCloserKpiData = async (
       });
       
       meta = filteredMetaData.reduce((sum: number, row: any) => sum + (row.Valor || 0), 0);
+      
+      console.log(`Meta for ${kpiType} (${metaType}) in ${fromMonth}/${fromYear}: ${meta}`);
+      if (filteredMetaData.length > 0) {
+        console.log('Meta data sample:', filteredMetaData[0]);
+      }
     }
 
     // Calculate percentage of completion

@@ -178,56 +178,66 @@ const CloserPage: React.FC = () => {
           range: JSON.stringify(validDateRange)
         });
         
-        // Prepare additional filters for origin
-        const originFilter = selectedOrigin !== 'all' ? { ORIGEM: selectedOrigin } : undefined;
+        // Normalize selected filters to ensure 'all' values are handled correctly
+        const normalizedCloser = selectedCloser === 'all' ? undefined : selectedCloser;
+        const normalizedOrigin = selectedOrigin === 'all' ? undefined : selectedOrigin;
+        const normalizedStatus = selectedStatus === 'all' ? undefined : selectedStatus;
+        const normalizedTemperature = selectedTemperature === 'all' ? undefined : selectedTemperature;
+        
+        console.log("Applying filters:", {
+          closer: normalizedCloser || 'all',
+          origin: normalizedOrigin || 'all',
+          status: normalizedStatus || 'all',
+          temperature: normalizedTemperature || 'all'
+        });
         
         // Load KPI data - now passing closingDateRange to all KPI fetches
-        const reunioes = await fetchCloserKpiData('reunioesRealizadas', validDateRange, selectedCloser, closingDateRange);
-        const vendas = await fetchCloserKpiData('vendas', validDateRange, selectedCloser, closingDateRange);
-        const valorVendido = await fetchCloserKpiData('valorVendido', validDateRange, selectedCloser, closingDateRange);
-        const ticketMedio = await fetchCloserKpiData('ticketMedio', validDateRange, selectedCloser, closingDateRange);
-        const taxaConversao = await fetchCloserKpiData('taxaConversao', validDateRange, selectedCloser, closingDateRange);
-        const cicloVendas = await fetchCloserKpiData('cicloVendas', validDateRange, selectedCloser, closingDateRange);
+        const reunioes = await fetchCloserKpiData('reunioesRealizadas', validDateRange, normalizedCloser, closingDateRange);
+        const vendas = await fetchCloserKpiData('vendas', validDateRange, normalizedCloser, closingDateRange);
+        const valorVendido = await fetchCloserKpiData('valorVendido', validDateRange, normalizedCloser, closingDateRange);
+        const ticketMedio = await fetchCloserKpiData('ticketMedio', validDateRange, normalizedCloser, closingDateRange);
+        const taxaConversao = await fetchCloserKpiData('taxaConversao', validDateRange, normalizedCloser, closingDateRange);
+        const cicloVendas = await fetchCloserKpiData('cicloVendas', validDateRange, normalizedCloser, closingDateRange);
         
-        // Load performance data - now passing closingDateRange and originFilter
+        // Load performance data - now passing closingDateRange and normalizedOrigin
         const performance = await fetchCloserPerformanceData(
           validDateRange, 
-          selectedCloser, 
-          selectedOrigin,
+          normalizedCloser, 
+          normalizedOrigin,
           closingDateRange
         );
         
-        // Load sales funnel data - now passing closingDateRange and originFilter
+        // Load sales funnel data - now passing closingDateRange and normalizedOrigin
         const funnel = await fetchCloserSalesFunnelData(
           validDateRange, 
-          selectedCloser, 
-          selectedOrigin,
+          normalizedCloser, 
+          normalizedOrigin,
           closingDateRange
         );
         
-        // Load sales cycle data - now passing closingDateRange and originFilter
+        // Load sales cycle data - now passing closingDateRange and normalizedOrigin
         const cycleData = await fetchCloserSalesCycleData(
           validDateRange, 
-          selectedCloser, 
-          selectedOrigin,
+          normalizedCloser, 
+          normalizedOrigin,
           closingDateRange
         );
         
-        // Load loss reasons data - now passing closingDateRange and originFilter
+        // Load loss reasons data - now passing closingDateRange and normalizedOrigin
         const lossReasons = await fetchCloserLossReasonsData(
           validDateRange, 
-          selectedCloser, 
-          selectedOrigin,
+          normalizedCloser, 
+          normalizedOrigin,
           closingDateRange
         );
         
         // Load negotiations data with advanced filters
         const negotiationsData = await fetchNegotiations(
           validDateRange,
-          selectedCloser,
-          selectedOrigin,
-          selectedStatus,
-          selectedTemperature,
+          normalizedCloser,
+          normalizedOrigin,
+          normalizedStatus,
+          normalizedTemperature,
           closingDateRange
         );
         

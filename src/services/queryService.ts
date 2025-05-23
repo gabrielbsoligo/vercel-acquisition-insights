@@ -76,6 +76,9 @@ export const fetchFilteredData = async (
             if (Array.isArray(value)) {
               query = query.in(actualKey, value);
             }
+          } else if (value === 'all') {
+            console.log(`Skipping filter for ${key} because value is 'all'`);
+            // Skip filtering for 'all' values
           } else {
             query = query.eq(key, value);
           }
